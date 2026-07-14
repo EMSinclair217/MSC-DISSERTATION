@@ -19,9 +19,9 @@ library(igraph)
 ```
 Using pipeline created in previous network analysis '12 Month Networks.Rmd'
 
-Data - 1 year synthetic cattle movement data, split into 12 equal dataframes using qcut in python. Entry point, packer removed.
+Data - 1 year synthetic cattle movement data, split into 12 equal dataframes using qcut in python. Entry point, packer removed. Aggregated so that all movement events in one day between 2 premises are 1 event with total_cattle
 
-# Copy of pipeline function
+# Copy of GRAPH pipeline function (added edge weights - total cattle moved)
 ```{r}
 node_colours <- c(
   "Cow-Calf" = "green",
@@ -58,6 +58,10 @@ plot_movement_network <- function(df, month_label = "XX") {
     directed = TRUE
   )
 
+  # Add weights
+  
+  E(g)$weight <- df$total_cattle # 'E(g) is igraphs built-in edge sequence, meaning 'all edges in graph' - so this adds a new attribute called 'weight' to each edge
+  
   # 4. Colours
   cols <- node_colours[V(g)$type]
   # margins
@@ -107,4 +111,205 @@ plot_movement_network <- function(df, month_label = "XX") {
 
 # Import data #
 
+```{r}
+Q12_M1_RQ1 <- read.csv("Q12(D1_RQ1).csv", check.names = TRUE) # tells R to sanitise column names
+#head(Q12_M1)
+Q12_M2_RQ1 <- read.csv("Q12(D2_RQ1).csv", check.names = TRUE) 
+#head(Q12_M2)
+Q12_M3_RQ1 <- read.csv("Q12(D3_RQ1).csv", check.names = TRUE) 
+#head(Q12_M3)
+Q12_M4_RQ1 <- read.csv("Q12(D4_RQ1).csv", check.names = TRUE) 
+#head(Q12_M4)
+Q12_M5_RQ1 <- read.csv("Q12(D5_RQ1).csv", check.names = TRUE) 
+#head(Q12_M5)
+Q12_M6_RQ1 <- read.csv("Q12(D6_RQ1).csv", check.names = TRUE) 
+#head(Q12_M6)
+Q12_M7_RQ1 <- read.csv("Q12(D7_RQ1).csv", check.names = TRUE) 
+#head(Q12_M7)
+Q12_M8_RQ1 <- read.csv("Q12(D8_RQ1).csv", check.names = TRUE) 
+#head(Q12_M18)
+Q12_M9_RQ1 <- read.csv("Q12(D9_RQ1).csv", check.names = TRUE) 
+#head(Q12_M9)
+Q12_M10_RQ1 <- read.csv("Q12(D10_RQ1).csv", check.names = TRUE) 
+#head(Q12_M10)
+Q12_M11_RQ1 <- read.csv("Q12(D11_RQ1).csv", check.names = TRUE) 
+#head(Q12_M11)
+Q12_M12_RQ1 <- read.csv("Q12(D12_RQ1).csv", check.names = TRUE) 
+#head(Q12_M12)
+```
+```{r}
+head(Q12_M1_RQ1)
+```
+# Call function for all 12 months #
 
+```{r}
+#par(mfrow = c(6, 2), mar = c(0,0,0,0), oma = c(4,0,0,0)) # 3 rows, 4 columns, no margins
+
+g_M1_RQ1 <- plot_movement_network(Q12_M1_RQ1, "Month 1")
+g_M2_RQ1 <- plot_movement_network(Q12_M2_RQ1, "Month 2")
+g_M3_RQ1 <- plot_movement_network(Q12_M3_RQ1, "Month 3")
+g_M4_RQ1 <- plot_movement_network(Q12_M4_RQ1, "Month 4")
+g_M5_RQ1 <- plot_movement_network(Q12_M5_RQ1, "Month 5")
+g_M6_RQ1 <- plot_movement_network(Q12_M6_RQ1, "Month 6")
+g_M7_RQ1 <- plot_movement_network(Q12_M7_RQ1, "Month 7")
+g_M8_RQ1 <- plot_movement_network(Q12_M8_RQ1, "Month 8")
+g_M9_RQ1 <- plot_movement_network(Q12_M9_RQ1, "Month 9")
+g_M10_RQ1 <- plot_movement_network(Q12_M10_RQ1, "Month 10")
+g_M11_RQ1 <- plot_movement_network(Q12_M11_RQ1, "Month 11")
+g_M12_RQ1 <- plot_movement_network(Q12_M12_RQ1, "Month 12")
+
+#par(mfrow = c(1, 1))   # reset afterwards
+```
+
+# compute metrics
+```{r}
+g <- g_M10_RQ1
+d <- Q12_M10_RQ1
+
+c1 <- vcount(g)
+c2 <- ecount(g)
+
+c3 <- degree(g, mode = "in") # remains unweighted. Degree = number of neighbours
+c4 <- degree(g, mode = "out")
+
+c5 <- nrow(d) # movements = number of rows
+
+c6 <- betweenness(g, weights = E(g)$weight) # include weights so cattle volume taken into account - makes shortest path reflect movement volume - epidemiologically meaningful
+
+c7 <- transitivity(g, type = "average") # clustering coefficient - expect to be zero as heirarchal and directed
+
+c8 <- max(components(g, mode = "weak")$csize) # tells how many farms are reachable ignoring direction
+
+c9 <- strength_in  <- strength(g, mode = "in",  weights = E(g)$weight)
+
+c10 <-strength_out <- strength(g, mode = "out", weights = E(g)$weight)
+
+
+summary_mets <- data.frame(
+  node = c1,
+  edge = c2,
+  max_indegree = max(c3),
+  min_indegree = min(c3),
+  max_outdegree = max(c4),
+  min_outdegree = min(c4),
+  movements = c5,
+  median_betweenness = median(c6),
+  cluster_avg = c7,
+  gwcc_size = c8,
+  max_strength_in = max(c9),
+  max_strength_out = max(c10)
+)
+
+summary_mets # gives network-level averages and extremes for the month - will need node metrics also
+```
+
+# Graph Metrics Table for Comparison #
+
+| measurement         | g_M1 | g_M2 | g_M3 | g_M4 | g_M5 | g_M6 | g_M7 | g_M8 | g_M9 | g_M10 | g_M11 | g_M12 |
+|---------------------|------|------|------|------|------|------|------|------|------|-------|-------|-------|
+| node                |258   |  262 |241   |233   |243   |255   |229  |231    |215   |211   |231      |219       |
+| edge                |  1132 |1035 |1035 | 1069  | 1019  |1054 |1080 |1048 | 1047  |1080   |1063     |1020       |
+| max indegree        |  34   |  56 |40   |  38   | 33    |29   |22   |22   |33     |59     |54   | 56      |
+| min indegree        |    0  |   0 |0    |0      | 0     |0    |0    |0    |0      |0      |0    | 0      |
+| max outdegree       |   82   |  71|72   | 54    | 57    |100  |54   |56   |54     |42     |39   | 54      |
+| min outdegree       |   0   |  0  |0    |0      | 0     |0    |0    |0    |0      |0      |0    | 0      |
+| movements           |      |      | 1035 |1069  | 1019  |1054 |1080 |1048 |1047   |1080 |1063   | 1020      |
+| median betweenness  |   0   |  0    |0   | 0    |0      |0    |0    |0    |0      |0    |0      |0       |
+| cluster avg         |   0   |   0   | 0   | 0   |0      |0    |0    |0    |0      |0    |0      |0       |
+| gwcc size           |  258    | 262 |241  |233  |243    |255  |229  |231  |215    |211  |231    |219       |
+| max strength in     |   1999   |828 |652  |1264 |2899   |4448 |3859 |3122 |2191   |5403 |1851 |9077       |
+| max strength out    |    7563  | 3313 |3223 |4887 |6505 |18453|10932|10287|7194| 8104 |2398   | 11228      |
+
+# Node level metrics per month
+Describe each farm individualy - gives one row per node, not one row per month as above
+
+```{r}
+
+g <- g_M1_RQ1
+d <- Q12_M1_RQ1
+
+
+node_metrics <- data.frame(
+  node = V(g)$name,
+  type = V(g)$type,
+  indegree = degree(g, mode = "in"),
+  outdegree = degree(g, mode = "out"),
+  strength_in = strength(g, mode = "in", weights = E(g)$weight),
+  strength_out = strength(g, mode = "out", weights = E(g)$weight),
+  betweenness = betweenness(g, weights = E(g)$weight),
+  eigen = eigen_centrality(g, weights = E(g)$weight)$vector,
+  clustering = transitivity(g, type = "local")
+)
+```
+
+```{r}
+head(node_metrics)
+```
+```{r}
+# histogram of strength out
+hist(node_metrics$strength_out,
+     main = "Distribution of Strength Out",
+     xlab = "Total Cattle Sent Out",
+     breaks = 30,
+     col = "lightblue")
+
+```
+```{r}
+# top farms, barplot of highest values
+top <- node_metrics[order(-node_metrics$strength_out), ][1:10, ]
+
+barplot(top$strength_out,
+        names.arg = top$node,
+        las = 2,
+        col = "purple",
+        main = "Top 10 Farms by Strength Out M1",
+        ylab = "Total Cattle Sent Out")
+```
+```{r}
+# top farms, barplot of highest values
+top <- node_metrics[order(-node_metrics$outdegree), ][1:10, ]
+
+barplot(top$outdegree,
+        names.arg = top$node,
+        las = 2,
+        col = "purple",
+        main = "Top 10 Farms by Outdegree M1",
+        ylab = "Total Cattle Sent Out")
+```
+Eigenvector centrality (eigen) meaures how well connected a node is to other well-connected nodes - 'influence' sort of score rather than simplecount of conections.
+A node will have a high eigen score if: it is connected to many nodes AND those nodes themselves have high connectivity
+
+Degree = how many farms a node connects to
+strength = how many cattle a node moves
+Betweeness = how often the node sites between others
+eigenvector = how influential a ndoes neighbours are - shows structurally influential farms, not just busy ones - i.e. low degree/strength/betweeness but high eigen-> it connects to a very important hub - can amplify disease even if its own movement volume is small
+
+```{r}
+# top farms, barplot of highest values
+top <- node_metrics[order(-node_metrics$eigen), ][1:10, ]
+
+barplot(top$eigen,
+        names.arg = top$node,
+        las = 2,
+        col = "purple",
+        main = "Top 10 Farms by Eigenvector M1",
+        ylab = "Total Cattle Sent Out")
+```
+What other metrics to visualise - literature
+
+So going to want:
+
+?Superspreaders?
+
+  strength out (weighted out-degree) - total cattle sent - potential infectious contacts
+  Out-degree (unweighted) - number of distinct farms they send cattle to - spread reach
+  Eigenvector centrality - measures influence through who a node is connected to - a farm selling cattle to important hubs is more dangerous
+
+?Super recievers?
+
+  strength in - total cattle recieved = direct measure of exposure
+  in-degree - number of distinct farms they recieve cattle from - more sources = more exposure routes
+  Eigen - high = structurally important recievers - they recieve from influencital hubs
+  
+THEN 
+plot distributions, identify top x%, compare farm types & track farms across months - WEDNESDAY - LOOK AT PAPERS IN LIST THAT DO SIMILAR
