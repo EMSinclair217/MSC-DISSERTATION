@@ -9,22 +9,102 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+#RQ1 
+How does a synthetic temporal cattle-movement network generate structural heterogeneity, and what network features characterise highly connected farms (potential superspreaders) over time?
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r}
+# LIBRARIES
+library(dplyr)
+library(igraph)
+```
+Using pipeline created in previous network analysis '12 Month Networks.Rmd'
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Data - 1 year synthetic cattle movement data, split into 12 equal dataframes using qcut in python. Entry point, packer removed.
 
-```{r cars}
-summary(cars)
+# Copy of pipeline function
+```{r}
+node_colours <- c(
+  "Cow-Calf" = "green",
+  "Entry Point" = "lightblue",
+  "Starter Feedlot" = "purple",
+  "Finishing Feedlot" = "orange"
+)
+
+# margins
+par(mar = c(0,0,0,0), oma = c(2,0,0,0)) # hash this is doing 12 plot layout
+
+plot_movement_network <- function(df, month_label = "XX") {
+
+  # convert IDs to character before building nodes and edges
+  df$org_id  <- as.character(df$org_id)
+  df$dest_id <- as.character(df$dest_id)
+
+  # 1. Node table
+  org_nodes  <- df[, c("org_id", "org_type")]
+  colnames(org_nodes) <- c("name", "type")
+
+  dest_nodes <- df[, c("dest_id", "dest_type")]
+  colnames(dest_nodes) <- c("name", "type")
+
+  nodes <- unique(rbind(org_nodes, dest_nodes))
+
+  # 2. Edge list
+  edges <- df[, c("org_id", "dest_id")]
+
+  # 3. Graph
+  g <- graph_from_data_frame(
+    d = edges,
+    vertices = nodes,
+    directed = TRUE
+  )
+
+  # 4. Colours
+  cols <- node_colours[V(g)$type]
+  # margins
+  #par(mar = c(0,0,0,0), oma = c(4,0,0,0)) # hash this is doing 12 plot layout
+
+  # 5. Layers
+  layer_order <- c("Cow-Calf",
+                   "Entry Point",
+                   "Starter Feedlot",
+                   "Finishing Feedlot")
+
+  V(g)$layer <- as.numeric(factor(V(g)$type, levels = layer_order))
+
+  # Layout
+  lay <- layout_with_sugiyama(g, layers = V(g)$layer)$layout
+
+  # Plot
+  plot(
+    g,
+    layout = lay,
+    vertex.color = cols,
+    vertex.label = V(g)$name,
+    vertex.size = 25,
+    vertex.label.cex = 0.9,
+    edge.arrow.size = 0.5
+  )
+
+  # Title
+  mtext(
+    paste("Monthly Movement Network", month_label),
+    side = 3, line = 0.5, cex = 1.5
+  )
+
+  # Legend
+  legend(
+    "topright",
+    legend = names(node_colours),
+    col = node_colours,
+    pch = 19,
+    pt.cex = 1.5,
+    bty = "n"
+  )
+  # Return the graph object for metrics
+  return(g)
+}
 ```
 
-## Including Plots
+# Import data #
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
