@@ -9,8 +9,25 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-#RQ1 
-How does a synthetic temporal cattle-movement network generate structural heterogeneity, and what network features characterise highly connected farms (potential superspreaders) over time?
+#RQ1 - How does a synthetic temporal cattle-movement network generate structural heterogeneity, and what network features characterise highly connected farms (potential superspreaders) over time?
+
+A - create networks & visualise (clarify that is descriptive not analytical - that is from metrics), compute network metrics to show consistency in structure - structural features - density/component size/diameter, presence/absence of cycles etc. In theory - will set up argument that the network does exhibit structural heterogeneity over time.
+
+DISTRIBUTION PLOTS FOR DEGREE/STRENGTH/BETWEENESS?
+
+B - 
+(I) compute node metrics and compare to assess for superspreader characteristics/emergence
+  plots of top 5% nodes by out degree(explain why) across 12 months- does it change, do some emerge as consistent top 5%, is there a cyclical pattern
+  
+(II)  standardise metrics and use parallel plot to show outdegree, strengthout, betweeness of nodes across month 
+  
+(III)  for each month - plot top 5% outdegree across the 3 metrics - any hidden patterns (e.g. farms with high strength but low degree, farms with sudden beweenness spikes?
+  
+  look at persistence/volatility of superspreaders - do the same farms appear in the top 5% every mnth (persistent superspreaders) or do completely different farms appear each month (volatile superspreaders -> indicates temporal heterogeneity?). Are some farms consistently high degree nodes across the year (stable structural hubs), do other farms spike only in certain months -> remporal SS - ?seasonal trading?
+  
+(IV)  for each month - plot top 5% betweeness across the3 metrics - any hidden parameters
+
+C - disc structural heterogeneity, mention temporal heterogeneity (structural heterogeneity emerges when cow-calf farms enter the system - creates multi-step paths and increasing betweeness), summarise possible network features that characterise highly connected farms (e.g. high-dgree spreaders, high-strength spreaders, bridging farms) and discuss 'silent' high risk nodes if present (spike in betweeness/strength out but lower primary metric (degreeout)). link to literature
 
 ```{r}
 # LIBRARIES
@@ -140,7 +157,9 @@ Q12_M12_RQ1 <- read.csv("Q12(D12_RQ1).csv", check.names = TRUE)
 ```{r}
 head(Q12_M1_RQ1)
 ```
-# Call function for all 12 months #
+# A - create networks & visualise (clarify that is descriptive not analytical - that is from metrics), compute network metrics to show consistency in structure - structural features - density/component size/diameter, presence/absence of cycles etc. In theory - will set up argument that the network does exhibit structural heterogeneity over time.
+
+Call function for all 12 months 
 
 ```{r}
 #par(mfrow = c(6, 2), mar = c(0,0,0,0), oma = c(4,0,0,0)) # 3 rows, 4 columns, no margins
@@ -160,6 +179,83 @@ g_M12_RQ1 <- plot_movement_network(Q12_M12_RQ1, "Month 12")
 
 #par(mfrow = c(1, 1))   # reset afterwards
 ```
+
+# COMPUTE NETWORK METRICS HERE
+compute network metrics to show consistency in structure - structural features - density/component size/diameter, presence/absence of cycles etc. In theory - will set up argument that the network does exhibit structural heterogeneity over time.
+
+1. Network Density = proportion of possible edges that actually exist (equation for this). high = many connected farms = infection spreads easily
+2. component size - size of the largest weakly connected component (ignores direction) - large - infection can reach many farms, network not fragmented
+3. diameter - longest shortest pat between any two nodes - use weakly connected diameter - large = longmovement chains -> bridging farms matter/small diameter - compact network - outdegree dominates
+
+```{r}
+monthly_network_stats <- lapply(monthly_graphs, function(g) {
+  list(
+    density = edge_density(g, loops = FALSE),
+    largest_component = max(components(g, mode = "weak")$csize),
+    diameter = diameter(g, directed = FALSE, weights = NA)
+  )
+})
+```
+```{r}
+monthly_network_stats[[12]]
+```
+```{r}
+# as a table
+# compute stats per month
+monthly_network_stats <- lapply(monthly_graphs, function(g) {
+  list(
+    density = edge_density(g, loops = FALSE),
+    largest_component = max(components(g, mode = "weak")$csize),
+    diameter = diameter(g, directed = FALSE, weights = NA)
+  )
+})
+```
+```{r}
+# turn list of lists into a data frame
+monthly_network_summary <- do.call(
+  rbind,
+  lapply(seq_along(monthly_network_stats), function(i) {
+    data.frame(
+      month = paste0("Month_", i),
+      density = monthly_network_stats[[i]]$density,
+      largest_component = monthly_network_stats[[i]]$largest_component,
+      diameter = monthly_network_stats[[i]]$diameter
+    )
+  })
+)
+```
+```{r}
+# view table
+monthly_network_summary
+```
+Density = actual edges/possible edges
+for a directed network with 'n' farms: possible edges = n(n-1)
+so if have ~250 farms in a month: 250x249 = 62,250 possible directed edges
+BUT actual edges per month ~1000-1500 movements
+So density ~ 1500/62250 ~ 0.024
+
+Density is naturally low in livestock movement networks:
+  hierarchical
+  directed - animals move one way through food chain
+  sparse - most farms trade with only a few partners
+  seasonal
+  regulated movement patterns
+
+PER MONTH:
+NODES, EDGES, DENSITY, DIAMETER, ?CYCLES
+
+Evidence of heterogeneity:
+  outdegree varies month to month - top 5% farms change identity over tieme = structureal heterogeneity
+  
+  betweeness emerges only in later months - later months betweenness spikes, bridging farms appear = structural heterogeneity
+  
+  strength out changes - weighted movement volume varies - some months have huge cattle flows, some months are sparse - high volume SS appear and disappear = struct heter
+  
+  density increases slightly - small change in density in sparse network - large epidemiological effects
+  
+  diameter drops at month 10 - movement paths shortedn, hubs become more influential, briding farms matter more
+  
+Monthly networks remained fully weakly connected throughout the year, they also exhibited clear structural heterogeneity over time. variation in degree distribution, emergence of non-zero betweenness, changes in weighted movement strength, and shifts in diameter all indicate that the underlying movement structure evolved month-to-month. This temporal heterogeneity influenced which farms appeared as superspreaders under different metrics (out degree, strength, betweenness), demonstrating that superspreader identity is not static but depends on both network structure and movement volume.
 
 # compute metrics
 ```{r}
@@ -221,12 +317,12 @@ summary_mets # gives network-level averages and extremes for the month - will ne
 | max strength out    |    7563  | 3313 |3223 |4887 |6505 |18453|10932|10287|7194| 8104 |2398   | 11228      |
 
 # Node level metrics per month
-Describe each farm individualy - gives one row per node, not one row per month as above
+Describe each farm individualy - gives one row per node, not one row per month as above - reduce this to in/out degree, in/out strength/betweenness
 
 ```{r}
 
-g <- g_M1_RQ1
-d <- Q12_M1_RQ1
+g <- g_M6_RQ1
+d <- Q12_M6_RQ1
 
 
 node_metrics <- data.frame(
@@ -238,13 +334,24 @@ node_metrics <- data.frame(
   strength_out = strength(g, mode = "out", weights = E(g)$weight),
   betweenness = betweenness(g, weights = E(g)$weight),
   eigen = eigen_centrality(g, weights = E(g)$weight)$vector,
-  clustering = transitivity(g, type = "local")
+  pagerank = page_rank(g, directed = TRUE, weights = E(g)$weight)$vector,
+  clustering = transitivity(g, type = "local",),
+  hub = hub_score(g)$vector
 )
+
 ```
 
 ```{r}
 head(node_metrics)
 ```
+```{r}
+summary(node_metrics$hub)
+```
+This is all because monthly networks are directed, acycilic, hierarchial, no cycles or feedback loops
+Eigenvector basically always 1 or zero - due to acyclic nature of graph - collapses to 0/1
+Use pagerank instead - pagerank also very low - network has very low inbound structure - becomes almost uniform
+Try hubscore - measures how influential a node is in terms of outgoing edges https://link.springer.com/chapter/10.1007/978-981-99-8135-9_13 - shows which farms have real outgoing influence - structurally capable of spreading infection,farms that sit at key ipstream positions, farms which are ss in the network topology - not examples in infectious disease epidemiology
+
 ```{r}
 # histogram of strength out
 hist(node_metrics$strength_out,
@@ -256,47 +363,541 @@ hist(node_metrics$strength_out,
 ```
 ```{r}
 # top farms, barplot of highest values
-top <- node_metrics[order(-node_metrics$strength_out), ][1:10, ]
+n_top <- ceiling(0.05 * nrow(node_metrics)) # compute top 5%
 
-barplot(top$strength_out,
-        names.arg = top$node,
+top_SO <- node_metrics[order(-node_metrics$strength_out), ][1:n_top, ] # apply top 5% to ordered nodes (by default 'order' apply ascending, use '-' to flip it)
+
+
+barplot(top_SO$strength_out,
+        names.arg = top_SO$node,
         las = 2,
         col = "purple",
-        main = "Top 10 Farms by Strength Out M1",
-        ylab = "Total Cattle Sent Out")
+        main = "Top 5% Farms by Strength Out M1",
+        ylab = "Total Cattle Sent Out",
+        xlab = "Farm ID")
 ```
 ```{r}
-# top farms, barplot of highest values
-top <- node_metrics[order(-node_metrics$outdegree), ][1:10, ]
+top
+```
+```{r}
+node_metrics_sorted_SO <- node_metrics[order(node_metrics$strength_out, decreasing = TRUE), ]
 
-barplot(top$outdegree,
-        names.arg = top$node,
+barplot(node_metrics_sorted_SO$strength_out,
+        names.arg = node_metrics_sorted_SO$node,
         las = 2,
         col = "purple",
-        main = "Top 10 Farms by Outdegree M1",
-        ylab = "Total Cattle Sent Out")
+        main = "Farms by Strength Out M1",
+        ylab = "Total Cattle Sent Out",
+        xlab = "Farm ID")
 ```
+
+
+```{r}
+n_top_DO <- ceiling(0.05 * nrow(node_metrics)) # compute top 5%
+# top farms, barplot of highest values
+top_DO <- node_metrics[order(-node_metrics$outdegree), ][1:n_top_DO, ] # apply top 5% to ordered nodes (by default 'order' apply ascending, use '-' to flip it)
+
+barplot(top_DO$outdegree,
+        names.arg = top_DO$node,
+        las = 2,
+        col = "purple",
+        main = "Top 5% Farms by Outdegree M1",
+        ylab = "Number of Farms Send Cattle To",
+        xlab = "Farm ID")
+```
+```{r}
+node_metrics_sorted <- node_metrics[order(node_metrics$outdegree, decreasing = TRUE), ]
+
+barplot(node_metrics_sorted$outdegree,
+        names.arg = node_metrics_sorted$node,
+        las = 2,
+        col = "purple",
+        main = "Farms by Outdegree M1",
+        ylab = "Number of Farms Send Cattle To",
+        xlab = "Farm ID")
+```
+
 Eigenvector centrality (eigen) meaures how well connected a node is to other well-connected nodes - 'influence' sort of score rather than simplecount of conections.
 A node will have a high eigen score if: it is connected to many nodes AND those nodes themselves have high connectivity
 
 Degree = how many farms a node connects to
 strength = how many cattle a node moves
 Betweeness = how often the node sites between others
-eigenvector = how influential a ndoes neighbours are - shows structurally influential farms, not just busy ones - i.e. low degree/strength/betweeness but high eigen-> it connects to a very important hub - can amplify disease even if its own movement volume is small
+eigenvector centrality = how influential a nodes neighbours are - shows structurally influential farms, not just busy ones - i.e. low degree/strength/betweeness but high eigen-> it connects to a very important hub - can amplify disease even if its own movement volume is small
 
 ```{r}
+n_top_B <- ceiling(0.05 * nrow(node_metrics)) # compute top 5%
 # top farms, barplot of highest values
-top <- node_metrics[order(-node_metrics$eigen), ][1:10, ]
+# top farms, barplot of highest values
+top_B <- node_metrics[order(-node_metrics$betweenness), ][1:n_top_B, ] # apply top 5% to ordered nodes (by default 'order' apply ascending, use '-' to flip it)
 
-barplot(top$eigen,
-        names.arg = top$node,
+
+barplot(top_B$betweenness,
+        names.arg = top_B$node,
         las = 2,
         col = "purple",
-        main = "Top 10 Farms by Eigenvector M1",
-        ylab = "Total Cattle Sent Out")
+        main = "Top 5% Farms by Betweeness CHANGE MONTH HERE",
+        ylab = "Eigenvector Centrality",
+        xlab = "Farm ID")
 ```
+Eigenvector centrality assigns each node a score based on: how many connetions it has AND how central its neighbours are - relative, usually normalised - largest centrality value in the network = 1 = most infelucneital farm in the network - sits in core of the movement network
+
+If want to compare the metrics - standardise (out degree & eigenvector), plot them together for each farm = scatterplot/parallel coordinate plot. Use degree out if looking for distinct farms a nodde sends animals too; use strength out if looking for how many animals it sends (movement volume).
+
+```{r}
+node_metrics_sorted <- node_metrics[order(node_metrics$eigen, decreasing = TRUE), ]
+
+
+barplot(node_metrics_sorted$eigen,
+        names.arg = node_metrics_sorted$node,
+        las = 2,
+        col = "purple",
+        main = "Farms by Eigenvector M1",
+        ylab = "Eigenvector Centrality",
+        xlab = "Farm ID")
+```
+
+# B(I)
+assess for superspreader characteristics/emergence
+  plots of top 5% nodes by out degree(explain why) across 12 months- does it change, do some emerge as consistent top 5%, is there a cyclical pattern
+  
+  
+```{r}
+# compute node metrics for each month
+monthly_metrics <- lapply(monthly_graphs, function(g) {
+  data.frame(
+    node = V(g)$name,
+    outdegree = degree(g, mode = "out"),
+    strength_out = strength(g, mode = "out", weights = E(g)$weight),
+    betweenness = betweenness(g, weights = E(g)$weight)
+  )
+})
+
+```
+```{r}
+#install.packages("randomcoloR")
+library(randomcoloR)
+
+all_nodes <- unique(unlist(lapply(monthly_metrics, function(m) m$node)))
+node_cols <- setNames(distinctColorPalette(length(all_nodes)), all_nodes)
+
+# create a colour lookup for all farms that every appear
+all_nodes <- unique(unlist(lapply(monthly_metrics, function(m) m$node)))
+node_cols <- setNames(distinctColorPalette(length(all_nodes)), all_nodes)
+
+barplots_outdeg <- lapply(seq_along(monthly_metrics), function(i) {
+
+  m <- monthly_metrics[[i]]
+
+  n_top <- ceiling(0.05 * nrow(m))
+
+  top_DO <- m[order(-m$outdegree), ][1:n_top, ]
+  top_DO <- top_DO[order(-top_DO$outdegree), ]
+
+  barplot(
+    top_DO$outdegree,
+    names.arg = top_DO$node,
+    las = 2,
+    col = node_cols[top_DO$node],
+    main = paste("Top 5% Farms by Outdegree - Month", i),
+    ylab = "Number of Farms Sent Cattle To",
+    xlab = "Farm ID"
+  )
+})
+```
+As a table:
+```{r}
+monthly_top5_outdeg <- lapply(monthly_metrics, function(m) {
+  n_top <- ceiling(0.05 * nrow(m))
+  top <- m[order(-m$outdegree), ][1:n_top, ]
+  top$node
+})
+```
+```{r}
+max_len <- max(sapply(monthly_top5_outdeg, length))
+
+monthly_top5_padded <- lapply(monthly_top5_outdeg, function(x) {
+  c(x, rep(NA, max_len - length(x)))
+})
+
+top5_table <- do.call(cbind, monthly_top5_padded)
+colnames(top5_table) <- paste0("Month_", seq_along(monthly_top5_padded))
+top5_table
+```
+Comparison table: 
+  rows= rank positions - 1st most conencted etc
+  columns = months
+  cells = farm IDs
+  NA - month had fewer top 5% farms than maximum across months
+
+Count how often each farm appears in the top 5% - persistence
+```{r}
+top5_long <- data.frame(
+  month = rep(1:12, sapply(monthly_top5_outdeg, length)),
+  node = unlist(monthly_top5_outdeg)
+)
+
+counts <- table(top5_long$node)
+counts
+```
+```{r}
+barplot(
+  counts,
+  las = 2,
+  col = "steelblue",
+  main = "Farm Persistence in Top 5% Outdegree",
+  ylab = "Number of Months Appearing in Top 5%",
+  xlab = "Farm ID"
+)
+```
+shows persistent superspreaders - 119, 284, 285, 95 - all appear 10+ times in top 5% by outdegree across all onths
+
+
+Do the same for Betweeness?
+
+
+
+
+
+# B (II)
+ standardise metrics and use parallel plot to show outdegree, strengthout, betweeness of nodes across month - highlight top 5% in red
+
+
+Each line = one farm - shows how each farm moves across the three metrics:
+  spike in eigen but low in strenght 
+  spike in strenght but low in degree
+  consistently high across all three- ?SS?
+  low across all 3 - ?peripheral farms
+  
+SO lines high across all 3 metrics= high risk nodes; lines that jump for one but not another - secialised risk profile; lines that stay low - low risk nodes
 What other metrics to visualise - literature
 
+View top 10 - need to select primary metric, then will display the e.g. top ten eigen, showing performance across all three metrics
+FOR EIGENVECTOR CENTRALITY
+
+
+
+
+Example interpretation:so when i have top 10 degree_out nodes across metrics eigen, outdeg, strengthout and i have one node that is 0.2, 0.5 outdeg, o.35 strengthout (284):
+  eigenvector centrality- low-moderate structural influence - not strongly connected to infeuenctial hubs
+  out_deg - moderate to high spread - sends cattle to many different farm - wide reach even if those farms are not influenctial - can spread infectin widely but not neccisarily into high rik clusters
+  strength_out - moderate volume - moves a moderate number of cattle
+
+This node would be a mid-risk spreader - can spread infection to many farms, does not sit in the influential core of the network and does not move large volumes.
+  
+See notes re eigen/pagerank/hubscore - new pipleine plan below
+
+
+```{r}
+# put all months into one list
+monthly_data <- list(
+  Q12_M1_RQ1,
+  Q12_M2_RQ1,
+  Q12_M3_RQ1,
+  Q12_M4_RQ1,
+  Q12_M5_RQ1,
+  Q12_M6_RQ1,
+  Q12_M7_RQ1,
+  Q12_M8_RQ1,
+  Q12_M9_RQ1,
+  Q12_M10_RQ1,
+  Q12_M11_RQ1,
+  Q12_M12_RQ1
+)
+```
+```{r}
+# name the list so know which month is which
+names(monthly_data) <- paste0("Month_", 1:12)
+```
+```{r}
+# build 12 networks using lapply
+library(igraph)
+
+monthly_graphs <- lapply(monthly_data, function(d) {
+  g <- graph_from_data_frame(
+    d[, c("org_id", "dest_id")],
+    directed = TRUE
+  )
+  E(g)$weight <- d$total_cattle
+  g
+})
+
+```
+```{r}
+#plot(monthly_graphs[[1]]) # plot graphs - N.B. isnt in hierarchial here but doesnt matter - dont actually need visual here
+```
+```{r}
+# compute node metrics for each month
+monthly_metrics_nodes <- lapply(monthly_graphs, function(g) {
+  data.frame(
+    node = V(g)$name,
+    outdegree = degree(g, mode = "out"),
+    strength_out = strength(g, mode = "out", weights = E(g)$weight),
+    betweenness = betweenness(g, weights = E(g)$weight)
+  )
+})
+
+```
+```{r}
+#str(monthly_metrics)
+```
+```{r}
+# head(monthly_metrics_nodes[[7]]) # change month to see metrics
+```
+
+
+
+```{r}
+# standardise metrics per month
+monthly_metrics_scaled1 <- lapply(monthly_metrics_nodes, function(m) {
+  m$outdeg_scaled   <- (m$outdegree - min(m$outdegree)) /
+                       (max(m$outdegree) - min(m$outdegree))
+
+  m$strength_scaled <- (m$strength_out - min(m$strength_out)) /
+                       (max(m$strength_out) - min(m$strength_out))
+
+  # betweenness is zero for early months, so guard against division by zero
+  if (max(m$betweenness) == min(m$betweenness)) {
+    m$betweenness_scaled <- 0 # prevents divide by zero for the mnths where betweeness is zero
+  } else {
+    m$betweenness_scaled <- (m$betweenness - min(m$betweenness)) /
+                            (max(m$betweenness) - min(m$betweenness))
+  }
+
+  m
+})
+```
+```{r}
+#lapply(monthly_metrics, function(m) summary(m$strength_out))
+```
+
+```{r}
+head(monthly_metrics_scaled)
+```
+```{r}
+# plot parallel-coordinate graphs per month
+library(tidyr)
+library(ggplot2)
+
+monthly_plots <- lapply(monthly_metrics_scaled1, function(m) {
+  df_long <- m |>
+    pivot_longer(cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+                 names_to = "metric",
+                 values_to = "value")
+
+  ggplot(df_long, aes(x = metric, y = value, group = node)) +
+    geom_line(alpha = 0.4) +
+    theme_minimal()
+})
+```
+
+```{r}
+# view parallel plot
+monthly_plots[[1]]
+```
+
+# B (III)
+  for each month - plot top 5% outdegree across the 3 metrics - any hidden patterns (e.g. farms with high strength but low degree, farms with sudden beweeness spikes?
+```{r}
+### 1. Identify top 5% farms per month using OUTDEGREE
+monthly_top5_OD <- lapply(monthly_metrics_scaled1, function(m) {
+  cutoff_OD <- quantile(m$outdegree, 0.95)
+  m$top5_OD <- m$outdegree >= cutoff_OD
+  m
+})
+```
+
+```{r}
+### 2. Parallel plot showing ALL farms, with top 5% highlighted in red
+library(tidyr)
+library(ggplot2)
+
+monthly_plots_ODTOP5 <- lapply(monthly_top5_OD, function(m) {
+
+  df_long_OD <- m |>
+    pivot_longer(
+      cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  ggplot(df_long_OD, aes(
+    x = metric,
+    y = value,
+    group = node,
+    colour = top5_OD
+  )) +
+    geom_line(alpha = 0.6) +
+    scale_colour_manual(values = c("FALSE" = "grey70", "TRUE" = "red")) +
+    theme_minimal() +
+    ggtitle("Parallel Coordinates — Top 5% Highlighted (Outdegree)")
+})
+```
+```{r}
+### 3. View the highlight plot for any month
+monthly_plots_ODTOP5[[1]]
+```
+```{r}
+### 4. Extract ONLY the top 5% farms (Outdegree)
+monthly_top5_only_OD <- lapply(monthly_top5_OD, function(m) {
+  m[m$top5_OD, ]
+})
+```
+```{r}
+### 5. Assign unique colours to each top‑5% farm ID (consistent across months)
+library(randomcoloR)
+
+all_top_nodes_OD <- unique(unlist(lapply(monthly_top5_only_OD, function(m) m$node)))
+
+node_cols_OD <- setNames(distinctColorPalette(length(all_top_nodes_OD)), all_top_nodes_OD)
+```
+```{r}
+### 6. Build parallel‑coordinates plot using ONLY top 5% farms
+library(tidyr)
+library(ggplot2)
+
+monthly_plots_top5_OD <- lapply(monthly_top5_only_OD, function(m) {
+
+  df_long_OD <- m |>
+    pivot_longer(
+      cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  ggplot(df_long_OD, aes(
+    x = metric,
+    y = value,
+    group = node,
+    colour = node
+  )) +
+    geom_line(linewidth = 1, alpha = 0.8) +
+    scale_colour_manual(values = node_cols_OD) +
+    theme_minimal() +
+    ggtitle("Top 5% Farms — Parallel Coordinates (Outdegree)")
+})
+```
+```{r}
+### 7. View any month (e.g., Month 9)
+monthly_plots_top5_OD[[12]]
+```
+  
+Any farms with:
+
+  High strength/low outdegree: M5 285 - strength higher than degree, between = 0; M7 95 BT & strength higher than degree
+  High betweeness/low outdegree: M6 285, 197, 40, 274, 284 - BT higher than degree; M8 284 BT higher than OD; M10 20, 284 BT>OD; M11 7, 40, 274 - BT>OD; M12 230, 40, 66 BT>OD
+  
+Top‑5% outdegree farms showing higher betweenness in some months means they also act as bridging superspreaders, and relying only on outdegree would miss these structurally high‑risk farms
+  
+# B (IV)  for each month - plot top 5% betweeness across the3 metrics - any hidden parameters
+
+```{r}
+# identify top 5% farms per month using betweenness
+monthly_top5_BT <- lapply(monthly_metrics_scaled1, function(m) {
+
+  cutoff_BT <- quantile(m$betweenness, 0.95)
+
+  m$top5_BT <- m$betweenness >= cutoff_BT
+
+  m
+})
+```
+```{r}
+# parallel plot showing all farms, top 5% highlighted in red
+library(tidyr)
+library(ggplot2)
+
+monthly_plots_BTTOP5 <- lapply(monthly_top5_BT, function(m) {
+
+  df_long_BT <- m |>
+    pivot_longer(
+      cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  ggplot(df_long_BT, aes(
+    x = metric,
+    y = value,
+    group = node,
+    colour = top5_BT
+  )) +
+    geom_line(alpha = 0.6) +
+    scale_colour_manual(values = c("FALSE" = "grey70", "TRUE" = "red")) +
+    theme_minimal() +
+    ggtitle("Parallel Coordinates — Top 5% Highlighted (Betweenness)")
+})
+```
+
+```{r}
+# view any month
+monthly_plots_BTTOP5[[9]]
+# all red because if all = 0 then all in top 5% (for months 1-5 before cow-calf starts)
+```
+```{r}
+# extract only top 5% farms
+monthly_top5_only_BT <- lapply(monthly_top5_BT, function(m) {
+  m[m$top5_BT, ]
+})
+```
+```{r}
+# assign unique colours to each farm ID
+library(randomcoloR)
+
+all_top_nodes_BT <- unique(unlist(lapply(monthly_top5_only_BT, function(m) m$node)))
+
+node_cols_BT <- setNames(distinctColorPalette(length(all_top_nodes_BT)), all_top_nodes_BT)
+```
+```{r}
+# build parallel coordinates plot using only top 5% farms
+monthly_plots_top5_BT <- lapply(monthly_top5_only_BT, function(m) {
+
+  df_long_BT <- m |>
+    pivot_longer(
+      cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  ggplot(df_long_BT, aes(
+    x = metric,
+    y = value,
+    group = node,
+    colour = node
+  )) +
+    geom_line(linewidth = 1, alpha = 0.8) +
+    scale_colour_manual(values = node_cols_BT) +
+    theme_minimal() +
+    ggtitle("Top 5% Farms — Parallel Coordinates (Betweenness)")
+})
+```
+```{r}
+# view any month
+monthly_plots_top5_BT[[12]] # for months 1-5 plot not visible because legend is so big
+```
+Shows top 5% farms based on betweeness - and plotted across BT, OD, ST
+
+Looking for farms that have OD/ST higher than BT: M7 95, 199 - OD>BT; M9 153 OD>BT, 284 ST>BT
+
+
+  
+# Compare all farms across all 12 months using three centrality metrics: betweenness, out‑degree, and strength‑out.
+by (ref) standard practice, superspreaders were initially defined as the top 5% of nodes ranked by outdegree and bridge nodes as the top 5% of nodes ranked by betweeness centrality. These were then compared across out degree, strenght out, and betweeness to assess differeces in characteristics for 'ss' nodes/look for silent high risk nodes. Add small section for - tried eigen/pagerank/hubscore but due to strucure of network not significant resutls.
+For each month, identify the farms that appear in the top 10 for any of these metrics.
+Standardise (scale) the metrics within each month and produce parallel‑coordinate plots to show how each top‑10 farm scores across all three metrics.
+Use these plots to identify patterns such as:
+
+consistent high‑risk farms across the year
+
+silent high‑risk farms (high strength‑out but low betweenness)
+
+emergence of bridging farms once cow–calf trading begins
+
+changes in superspreader profiles over time
+
+using 'lapply' - takes a list and applies a function to each element of that list - returns another list of hte results.
+
+monthly_data <- 
 So going to want:
 
 ?Superspreaders?
