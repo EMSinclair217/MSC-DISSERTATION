@@ -1,0 +1,189 @@
+---
+title: "TEST SIM"
+author: "ESINCLAIR"
+date: "2026-07-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+https://github.com/digivet-consortium/movenet/blob/main/R/network_creation.R
+https://digivet-consortium.github.io/movenet/authors.html#citation
+
+N.B. for SimInf model - graph needs to be in 
+A B
+A B
+A C
+A B
+
+Not
+
+A B 3 (movements)
+A C 1 etc
+```{r}
+library(movenet)
+
+# Load an example movement config file:
+load_config(system.file("configurations", "ScotEID.yml", package = "movenet"))
+#> Successfully loaded config file: C:/Users/cboga/OneDrive - University of Glasgow/Documents/R/win-library/4.1/movenet/configurations/ScotEID.yml
+# Read in and reformat an example movement data file:
+movement_data <- 
+  reformat_data(system.file("extdata", "example_movement_data.csv", package = "movenet"),
+                type = "movement")
+
+# Load an example holding config file:
+load_config(system.file("configurations", "fakeScotEID_holding.yml", package = "movenet")) 
+#> Successfully loaded config file: C:/Users/cboga/OneDrive - University of Glasgow/Documents/R/win-library/4.1/movenet/configurations/fakeScotEID_holding.yml
+# Read in and reformat an example holding data file:
+holding_data <- 
+  reformat_data(system.file("extdata", "example_holding_data.csv", package = "movenet"),
+                type = "holding")
+```
+```{r}
+head(movement_data)
+```
+```{r}
+head(holding_data)
+```
+```{r}
+# drop coordinates
+library(dplyr)
+hold_data_nocoord <- holding_data %>% select(- 'coordinates')
+```
+
+```{r}
+head(hold_data_nocoord)
+```
+```{r}
+library(SimInf)
+time_unit <- 1 #every how much time / how many days to report results for - because in events table - already in weeks - then time step of '1' = 1 week
+beta = 0.45 #transmission rate
+#Guinat et al 2016: 0.3 between-pen, 0.6 within-pen;
+#used in Halasa 2016a as low & high tm levels
+epsilon = 0.1 #incubation rate (1/incubation period)
+#Zhang et al 2021: 0.1 (0.05-0.25);
+#based on Barongo et al 2016, Nielsen et al 2017
+gamma = 0.25 #mortality rate
+#Zhang et al 2021: 0.25 (0.07-0.5)
+#based on Guinat et al 2016
+```
+```{r}
+# build the nodes
+nodes <- hold_data_nocoord %>%
+  transmute(
+    id = cph,
+    size = as.integer(herd_size)
+  )
+```
+
+```{r}
+# build the events table - this expands each edge into movement rows (converts igraph into SimInf events)
+# transmute is in dpylr package
+events <-
+  movement_data %>%
+  transmute(
+    event = "extTrans", #"extTrans" between nodes (or "intTrans","enter","exit") - simif event type for external transfer
+    time = as.integer((as.Date(departure_date)- min (as.Date(departure_date))) / 7) +1, # stops havig any week = 0 (0/7 = 0)
+    node = match(departure_cph, nodes$id),
+    dest = match(dest_cph, nodes$id), # this converts cph number to an integer for simif
+    n = qty_pigs, #weight (number pigs)
+    proportion = 0, #alternative to n, if want to move proportion (set n as 0)
+    select = 2, #col in model select matrix (which compartments to sample from)
+    shift = 0) #col in model shift matrix (if want to shift compartment)
+```
+
+Set up model
+```{r}
+n <- length(nodes$id) # number of nodes = number of farms in dataset
+# Build the initial conditions = x4 matrix of initial SEIR states
+u0 <- data.frame(S = nodes$size, # number of susceptibles = herd size
+                 E = rep(0, n),
+                 I = rep(0, n),
+                 R = rep(0, n))
+
+#Add single infectious individual to a single random node
+infected_node<-sample(n,1)
+u0[infected_node,1] <- u0[infected_node,1]-1 #take 1 individual out of S
+u0[infected_node,3] <- 1 #add 1 individual to I
+
+# Build the model timespan
+tspan <- seq(from = min(events$time), #first movement
+             to = max(events$time), #last movement
+             by = time_unit)
+
+model <- SEIR(u0 = u0, # initial conditions
+              tspan = tspan, # timespan
+              events = events, #moves between nodes
+              beta = beta, #transmission rate
+              epsilon = epsilon, #incubation rate (1/incubation period)
+              gamma = gamma) #mortality rate
+
+#Change the select_matrix of the model so that the 2nd column indicates
+#selection from S, E and I (but not R) compartments
+select_matrix(model) <- matrix(c(1, 0, 0, 0, 1, 1, 1, 0), nrow = 4)
+```
+Run the model
+
+```{r}
+#Summary stats of total outbreak size, for 10 simulations
+summary(replicate(n = 10, {
+  IR_at_end <- tail(trajectory(run(model))[c("I","R")], n)
+  #sum(IR_at_end)
+  summary(IR_at_end)
+}))
+```
+Most simulations had almost no outbreak.  
+Min, 1st quartile, and median are all 1, meaning in at least half of the runs only the single seeded pig was ever infected.
+
+Occasionally the outbreak spread.  
+The mean = 27.6 shows that a few larger outbreaks pulled the average up.
+
+Rarely, it spread substantially.  
+The maximum = 152 shows the biggest outbreak across the 10 runs.
+
+NB this is pigs not nodes. If want to change to nodes (for dissertation model) - set herd size = 1 for every node; nodes$size <- rep(1, n); 
+Then:
+
+S = 1 means node is susceptible
+
+E = 1 means node is exposed
+
+I = 1 means node is infectious
+
+R = 1 means node is removed
+
+# Need to change
+
+  model structure - SEI instead of SEIR?
+  the parameters - bTB slow, chrinic, low transmission - this is ASF in pigs
+  the initial conditions - farm-level not pig-level infection
+  the movement rules
+  
+  vignette("SimInf")
+vignette("trajectory")
+vignette("post-processing")
+
+Documentation for:
+
+   view model output
+   extract compartment values
+   inspect events
+   plot trajectories
+   analyse node-level results
+   
+```{r}
+browseVignettes("SimInf")
+```
+
+N.B. for SimInf model - graph needs to be in 
+A B
+A B
+A C
+A B
+
+Not
+
+A B 3 (movements)
+A C 1 etc

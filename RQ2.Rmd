@@ -1,0 +1,333 @@
+---
+title: "RQ2"
+author: "ESINCLAIR"
+date: "2026-07-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# LIBRARIES
+library(dplyr)
+library(igraph)
+library(movenet)
+library(SimInf)
+```
+
+Network weighted SEIR (edge weighted) - uses BFS and roll dice on probability of infection (based on weigthts - n_cattle, n_movements)
+Compartment-based SEIR (SimInf's built-in SEIR - compartment based) - doesn't perform BFS, does not roll a probability per edge, does not use movement intensity, does not use n_cattle or n_movements, does not weight edges, does not compute infection probability per movement.SimInf knows who moves to whom, when they move, how many individuals move, global beta, epsilon, gamma
+
+So either need to:
+1. Farm level comparment-based model using SimInf inbuilt SEIR (where disease spreads, when disease spreads, how big the outbreak becomes) & separate risk layer analysis (which farms have high movement intesity, which farms are superspreaders, which edges have high transmission potential). Then compare structural risk vs dynamic infetion = epidemiological insight. SEIR compartment model aligns with this paper https://www.mdpi.com/2076-2607/9/2/227 - also parameters - bTB reflective - susceptible, occult (infected but not infectious), infected, removed; https://www.sciencedirect.com/science/article/pii/S0034528814001404#s0015
+
+2. build a custom SimInf model - lots of code
+
+Phase 1: build SimInf SEIR on synthetic cattle movement network and confirm model runs and outputs are sensible; tune parameters for generic SEIR - using plausible values beta/epsilon/gamma to get a functioning euidemic crve; make it bTB reaslitic - adjust parameters; possibly refine compartment meanings to S-occult-I-removed - check results
+
+Phase 2: structural risk based analysis - build movement based risk layer using data - identify OD superspreaders, BT "silent" spreaders, and their persistence over time - will look for references for this concept - need movement networks contain superspreaders; movement intensity predicts epidemic risk; network centrality identifies high risk farms; risk based surveillance uses movement derived risk,removing high risk nodes reduces epidemic size, livestock movement risk analysis is standard pactice - ?but not in combination with SimInf
+
+Phase 3 - superspreader removal scenrios - remove high outdegree superspreader farms; remove high betweeness superspreader farms; re-run siminf and compare epidemic dynamics (final size, peak, timing, duration) against the baseline
+
+Import data
+```{r}
+data_year <- read.csv("RQ1 NO EP.csv", check.names = TRUE) # tells R to sanitise column names
+```
+```{r}
+head(data_year)
+```
+
+```{r}
+
+movements_per_node <- data_year %>%
+  group_by(org_id) %>% # groups all rows (movements) by the origin farm
+  summarise(n_moves = n()) # counts how many rows each farm has -> number of movements per farm
+
+max_moves <- max(movements_per_node$n_moves) # extracts the single largest count accros all farms
+max_moves
+```
+
+# NODE LIST
+
+
+```{r}
+# 1. Unique farm IDs
+all_ids <- sort(unique(c(data_year$org_id, data_year$dest_id)))
+
+# 2. Type lookup
+type_lookup <- rbind(
+  data.frame(id = data_year$org_id,  type = data_year$org_type),
+  data.frame(id = data_year$dest_id, type = data_year$dest_type)
+) |> dplyr::distinct(id, .keep_all = TRUE)
+
+# 3. Build nodes table, #left_join never drops IDs (occasioallly merge will)
+nodes <- left_join(
+  data.frame(
+  id = all_ids),
+  type_lookup, by = "id"
+)
+
+# 4. Final node list using transmute (matches movenet test_sim example)
+nodes <- nodes |>
+  transmute(
+    id   = id,
+    type = type,
+    size = max_moves # # 'size' = S = movement/infection capacity per farm (global value = max total movements)
+  )
+# “Because farms frequently make multiple same-day movements, we set a global node size 𝑆=10 to represent movement/infection capacity rather than literal individuals. This allows each farm to generate multiple infection opportunities per day, consistent with the empirical movement network.”
+
+```
+```{r}
+# double check
+length(all_ids)
+nrow(nodes)
+```
+
+In SimInf:
+  The node table defines how many infdividuals exist in each node
+  The u0 table initial state is built from that node table
+  The size column is interpreted as the number of individuals in the node
+  Therefore size =1 -> S=1 at model start
+```{r}
+tail(nodes)
+```
+
+# EDGES/MOVEMENTS table
+needs to match SimInf events - doesnt care what column names arebut needs origin farm ID, dest farm ID, time of movement (date/day - needs to be an int timestep), number of individuals moved (total_cattle) - see TEST SIM doc
+
+```{r}
+events <- data_year %>%
+  dplyr::transmute(
+    event = "extTrans",
+    time  = day,                     # already integer days
+    node  = match(org_id,  nodes$id),
+    dest  = match(dest_id, nodes$id),
+    n     = 0, # n = 0 in SimInf means ' dont move a fixed number of individuals' - so switches to using the proportion field instead, so all S,E and I individuals move to the destination farm
+    proportion = 0.5,# means move 100% of SEI individuals - every movement carries infectiousn if the farm is infectious - this means that each movement empties the origin farm (all S,E,I leave) so node e.g. 157 stops beng infectious as soon as it 'moves'
+    select = 2, # means use row 2 of the select matrix
+    shift = 0
+  )
+
+# proportion = fraction of the farm’s infectious pressure that moves during a movement event. e.g. on average 10% ofa farms animals move during a movement event - even though model is farm-level, this gives a realistic scaling
+```
+```{r}
+head(events)
+```
+
+event = "extrans"= movement between nodes
+
+time = day = day of movement
+
+node= origin
+
+dest = destination
+
+n = number of cattle moved
+
+proportion - controls whether the movement removes a fixed number (n) or a proportion of individuals - proportion = 0 = use n (batch ize) - correct for farm level model
+
+selected - tells siminf which compartments to sample from when removing individuals - it indexes the select matrix that is set later - because select = 2 it means - remove individuals from SE and I, do not remove from R - it matches the example siminf - animals can move whether susceptible, exposed, or infectious
+
+shift - controls whether individuals change compartment during the event: shift = 0 - no compartment change; shift >0 - use the shift matrix to move individuals into a different compartment
+```{r}
+time_unit <- 1 #every how much time / how many days to report results for - because in events table - already in weeks - then time step of '1' = 1 week
+beta = 1.0 #transmission rate
+#Guinat et al 2016: 0.3 between-pen, 0.6 within-pen;
+#used in Halasa 2016a as low & high tm levels
+epsilon = 0.2 #incubation rate (1/incubation period)
+#Zhang et al 2021: 0.1 (0.05-0.25);
+#based on Barongo et al 2016, Nielsen et al 2017
+gamma = 0.1 #mortality rate
+#Zhang et al 2021: 0.25 (0.07-0.5)
+#based on Guinat et al 2016
+```
+
+# Build SEIR model
+
+1. build the initial conditions (u0)
+2. Build hte model timespan (tspan)
+3. construct the SEI model
+4. set the select_matrix
+5. run the model
+6 summarise the results
+
+N.B. SimInf's SEIR is not farm level but individual level - need to make each farm 1 individual
+In write up need to explain why chose this more simplistic model
+
+```{r}
+# build initial conditions - have one individual per farm (size = 1), so each node starts with: S=, E=0, I=0
+# then seed infection in one random node
+n <- length(nodes$id)
+
+u0 <- data.frame(
+  S = nodes$size,
+  E = rep(0, n),
+  I = rep(0, n),
+  R = rep(0, n)
+)
+```
+
+```{r}
+# Seed infection in one random node
+infected_node <- sample(n, 1)
+u0[infected_node, "S"] <- u0[infected_node, "S"] - 1
+u0[infected_node, "I"] <- 1
+```
+```{r}
+# Build the model timespan
+
+# events$time column already in integer days
+tspan <- seq(
+  from = min(events$time),
+  to   = max(events$time),
+  by   = time_unit   # time_unit = 1 day
+)
+```
+```{r}
+#Build the SEIR model - SimInf built in SEIR model expects 4 compartments - S, E, I, R - R is anything that has left the #infectious pool - for this scenario will treat is as removed/culled.
+
+#gamma (y) - rate at which infected are culled/removed
+#select = 0 - so R never moves - matches "removed"
+
+
+model <- SEIR(
+  u0 = u0, # initial conditions
+  tspan = tspan, # timespan
+  events = events, #moves between nodes
+  beta = beta, #transmission rate
+  epsilon = epsilon, #incubation rate (1/incubation period)
+  gamma = gamma
+  ) #mortality rate
+```
+```{r}
+# Set the select matrix
+
+# Tells SimInf which compartments animals can be removed from during movement - column 2 - remove from SEI, do not remove from R
+
+select_matrix(model) <- matrix(
+  c(1, 0, 0, 0,
+    1, 1, 1, 0),
+  nrow = 4
+)
+```
+
+Run the model
+
+```{r}
+result <- run(model)
+```
+
+Extract the trajectory - gives the time series of SEIR for every node
+```{r}
+traj <- trajectory(result)
+
+# contains time, node, SEIR counts per node at each time step
+```
+```{r}
+head(traj)
+```
+
+Plot the epidemic/disease spread curve (total infectious over time)
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+epi_curve <- traj %>%
+  group_by(time) %>%
+  summarise(total_I = sum(I))
+
+ggplot(epi_curve, aes(time, total_I)) +
+  geom_line(colour = "red", size = 1) +
+  labs(
+    title = "Total Infectious Over Time",
+    x = "Time",
+    y = "Number Infectious"
+  )
+
+# shows outbreak start, peak infection, decline, final fade out
+```
+Plot epidemic size (cumulative number infected) - need to compute as SimInf doesnt track directly
+```{r}
+epi_farms <- traj %>%
+  group_by(time) %>%
+  summarise(
+    infected_farms = sum(I > 0)  # count farms with at least one infectious individual
+  )
+
+ggplot(epi_farms, aes(time, infected_farms)) +
+  geom_line(colour = "red", size = 1) +
+  labs(
+    title = "Number of Infectious Farms Over Time",
+    x = "Time",
+    y = "Infectious farms"
+  )
+
+# shows how many farms infected at each time point
+```
+Visualise spread across nodes (heatmap)
+```{r}
+# shows which farms were infected and when
+ggplot(traj, aes(time, factor(node), fill = I)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "red") +
+  labs(
+    title = "Infection Heatmap by Node",
+    x = "Time",
+    y = "Farm ID"
+  )
+```
+Identify peak infection time and size
+```{r}
+# gives peak number infectous, exact time occurs
+peak <- epi_curve %>% filter(total_I == max(total_I))
+peak
+```
+Identify which farms were infected
+```{r}
+# useful to compare baseline simulation vs simulation with SS nodes removed
+infected_nodes <- traj %>%
+  group_by(node) %>%
+  summarise(ever_infected = any(I > 0 | E > 0 | R > 0))
+
+infected_nodes
+```
+# Trouble shooting codes
+```{r}
+traj <- trajectory(result)
+
+traj %>%
+  group_by(time) %>%
+  summarise(total_I = sum(I)) %>%
+  head()
+```
+
+```{r}
+# check initial state of node
+model@u0[157, ]
+```
+```{r}
+# check for NA values
+summary(events$node)
+summary(events$dest)
+```
+
+```{r}
+head(nodes$id)
+tail(nodes$id)
+```
+```{r}
+events %>% filter(node == 157) %>% head()
+```
+```{r}
+sum(is.na(events$node))
+sum(is.na(events$dest))
+```
+```{r}
+which(nodes$id == 157)
+```
+```{r}
+events %>% filter(node == 157) %>% arrange(time)
+```

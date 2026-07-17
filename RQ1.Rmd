@@ -42,7 +42,6 @@ Data - 1 year synthetic cattle movement data, split into 12 equal dataframes usi
 ```{r}
 node_colours <- c(
   "Cow-Calf" = "green",
-  "Entry Point" = "lightblue",
   "Starter Feedlot" = "purple",
   "Finishing Feedlot" = "orange"
 )
@@ -86,7 +85,6 @@ plot_movement_network <- function(df, month_label = "XX") {
 
   # 5. Layers
   layer_order <- c("Cow-Calf",
-                   "Entry Point",
                    "Starter Feedlot",
                    "Finishing Feedlot")
 
@@ -159,6 +157,8 @@ head(Q12_M1_RQ1)
 ```
 # A - create networks & visualise (clarify that is descriptive not analytical - that is from metrics), compute network metrics to show consistency in structure - structural features - density/component size/diameter, presence/absence of cycles etc. In theory - will set up argument that the network does exhibit structural heterogeneity over time.
 
+ADD NETWORK FOR WHOLE YEAR HERE
+
 Call function for all 12 months 
 
 ```{r}
@@ -197,7 +197,7 @@ monthly_network_stats <- lapply(monthly_graphs, function(g) {
 })
 ```
 ```{r}
-monthly_network_stats[[12]]
+monthly_network_stats[[1]]
 ```
 ```{r}
 # as a table
@@ -257,10 +257,10 @@ Evidence of heterogeneity:
   
 Monthly networks remained fully weakly connected throughout the year, they also exhibited clear structural heterogeneity over time. variation in degree distribution, emergence of non-zero betweenness, changes in weighted movement strength, and shifts in diameter all indicate that the underlying movement structure evolved month-to-month. This temporal heterogeneity influenced which farms appeared as superspreaders under different metrics (out degree, strength, betweenness), demonstrating that superspreader identity is not static but depends on both network structure and movement volume.
 
-# compute metrics
+# compute NODE metrics
 ```{r}
-g <- g_M10_RQ1
-d <- Q12_M10_RQ1
+g <- g_M1_RQ1
+d <- Q12_M1_RQ1
 
 c1 <- vcount(g)
 c2 <- ecount(g)
@@ -321,8 +321,8 @@ Describe each farm individualy - gives one row per node, not one row per month a
 
 ```{r}
 
-g <- g_M6_RQ1
-d <- Q12_M6_RQ1
+g <- g_M1_RQ1
+d <- Q12_M1_RQ1
 
 
 node_metrics <- data.frame(
@@ -444,18 +444,7 @@ Eigenvector centrality assigns each node a score based on: how many connetions i
 
 If want to compare the metrics - standardise (out degree & eigenvector), plot them together for each farm = scatterplot/parallel coordinate plot. Use degree out if looking for distinct farms a nodde sends animals too; use strength out if looking for how many animals it sends (movement volume).
 
-```{r}
-node_metrics_sorted <- node_metrics[order(node_metrics$eigen, decreasing = TRUE), ]
 
-
-barplot(node_metrics_sorted$eigen,
-        names.arg = node_metrics_sorted$node,
-        las = 2,
-        col = "purple",
-        main = "Farms by Eigenvector M1",
-        ylab = "Eigenvector Centrality",
-        xlab = "Farm ID")
-```
 
 # B(I)
 assess for superspreader characteristics/emergence
@@ -554,10 +543,129 @@ shows persistent superspreaders - 119, 284, 285, 95 - all appear 10+ times in to
 
 
 Do the same for Betweeness?
+```{r}
+# install.packages("randomcoloR")
+library(randomcoloR)
 
+# Create colour lookup for all nodes across all months
+all_nodes <- unique(unlist(lapply(monthly_metrics, function(m) m$node)))
+node_cols <- setNames(distinctColorPalette(length(all_nodes)), all_nodes)
 
+# Barplots for top 5% by betweenness
+barplots_betw <- lapply(seq_along(monthly_metrics), function(i) {
 
+  m <- monthly_metrics[[i]]
 
+  n_top <- ceiling(0.05 * nrow(m))
+
+  # Order by betweenness (descending)
+  top_BW <- m[order(-m$betweenness), ][1:n_top, ]
+  top_BW <- top_BW[order(-top_BW$betweenness), ]
+
+  barplot(
+    top_BW$betweenness,
+    names.arg = top_BW$node,
+    las = 2,
+    col = node_cols[top_BW$node],
+    main = paste("Top 5% Farms by Betweenness - Month", i),
+    ylab = "Betweenness Centrality",
+    xlab = "Farm ID"
+  )
+})
+```
+
+```{r}
+# as table
+# top 5% for betweeness
+monthly_top5_betw <- lapply(monthly_metrics, function(m) {
+  n_top <- ceiling(0.05 * nrow(m))
+  top <- m[order(-m$betweenness), ][1:n_top, ]
+  top$node
+})
+```
+```{r}
+# pad months to equal length
+max_len <- max(sapply(monthly_top5_betw, length))
+
+monthly_top5_padded <- lapply(monthly_top5_betw, function(x) {
+  c(x, rep(NA, max_len - length(x)))
+})
+```
+```{r}
+# build comparison table
+top5_table <- do.call(cbind, monthly_top5_padded)
+colnames(top5_table) <- paste0("Month_", seq_along(monthly_top5_padded))
+top5_table
+```
+```{r}
+top5_long <- data.frame(
+  month = rep(1:12, sapply(monthly_top5_betw, length)),
+  node  = unlist(monthly_top5_betw)
+)
+
+counts_BT <- table(top5_long$node)
+counts_BT
+```
+```{r}
+barplot(
+  counts_BT,
+  las = 2,
+  col = "steelblue",
+  main = "Farm Persistence in Top 5% Betweeness",
+  ylab = "Number of Months Appearing in Top 5%",
+  xlab = "Farm ID"
+)
+```
+Create comparison table:
+
+```{r}
+# put counts into two named vectors
+betw_counts <- c(
+  `119`=3, `13`=6, `135`=1, `136`=2, `153`=4, `154`=1, `155`=2, `156`=4, `157`=3, `158`=2,
+  `167`=1, `178`=3, `179`=2, `180`=2, `20`=2, `203`=3, `204`=2, `21`=2, `22`=3, `23`=2,
+  `230`=3, `231`=2, `232`=2, `233`=3, `234`=2, `235`=3, `236`=2, `237`=1, `24`=1, `269`=3,
+  `274`=7, `284`=8, `285`=5, `300`=4, `301`=4, `40`=6, `41`=3, `42`=4, `66`=3, `7`=3,
+  `73`=1, `8`=6, `9`=3, `95`=7, `96`=5, `97`=5, `98`=1
+)
+
+outdeg_counts <- c(
+  `119`=10, `129`=5, `135`=2, `151`=3, `153`=9, `155`=2, `157`=2, `167`=1, `178`=2, `179`=2,
+  `20`=4, `202`=3, `203`=2, `204`=1, `21`=1, `212`=3, `213`=2, `214`=2, `218`=1, `230`=5,
+  `231`=3, `232`=2, `253`=4, `255`=4, `269`=1, `274`=6, `284`=10, `285`=10, `299`=1,
+  `300`=1, `301`=1, `40`=6, `41`=6, `42`=3, `66`=1, `7`=2, `73`=2, `88`=3, `95`=12,
+  `96`=2, `97`=3, `98`=1, `99`=1
+)
+```
+
+```{r}
+# merge into comparison table
+comparison <- merge(
+  data.frame(node = names(betw_counts), betweenness_count = betw_counts),
+  data.frame(node = names(outdeg_counts), outdegree_count = outdeg_counts),
+  by = "node",
+  all = TRUE
+)
+
+comparison
+```
+
+```{r}
+# identify farms appearing in both sets
+comparison$in_both <- with(comparison,
+                           !is.na(betweenness_count) & !is.na(outdegree_count))
+```
+```{r}
+# sort by silent spreader behaviour - high BT, low OD
+comparison$SSI <- comparison$betweenness_count / (comparison$outdegree_count + 1)
+
+comparison_sorted <- comparison[order(-comparison$SSI), ]
+```
+```{r}
+comparison_sorted
+```
+
+SSI = BT/1-OD - this needs changed so dont get SSI = NA - need all outdegree number etc
+Calculate a silent spreader index?
 
 # B (II)
  standardise metrics and use parallel plot to show outdegree, strengthout, betweeness of nodes across month - highlight top 5% in red
