@@ -1,0 +1,633 @@
+---
+title: "SOIR"
+author: "ESINCLAIR"
+date: "2026-07-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+https://pmc.ncbi.nlm.nih.gov/articles/PMC3475695/ - SORI model
+https://pmc.ncbi.nlm.nih.gov/articles/instance/2600903/bin/rspb20071601s01.pdf 
+https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004038#pcbi-1004038-g001
+https://pmc.ncbi.nlm.nih.gov/articles/PMC6122770/#Sec5
+https://efsa.onlinelibrary.wiley.com/doi/full/10.2903/j.efsa.2023.8028
+
+Built from work in TEST SIM 2 Rmd
+
+Choosing parameters (involves sensitivity analysis to give plausible values)
+
+Beta:
+
+  https://www.nature.com/articles/nature13529#MOESM74 & supplementary information https://static-content.springer.com/esm/art%3A10.1038%2Fnature13529/MediaObjects/41586_2014_BFnature13529_MOESM74_ESM.pdf
+  
+  Paper shows beta is low - however my model does not have environment etc - test range of beta
+  β = 0.001
+  β = 0.005
+  β = 0.01
+  β = 0.02
+  
+Parameter	        Best source
+
+Occult period	          Brooks-Pollock/Conlan (SORI framework and                               discussion of uncertainty)
+
+Movement transmission	  Green et al.; BoTMEW (movement-based         transmission)
+
+Transmission probability (β)	see ref in beta This paper, emphasising that direct transmission is low and uncertain
+
+Infectious period	  EFSA review and experimental infection literature, because this paper does not estimate a fixed infectious duration
+
+
+Parameter	Literature evidence	Suggested baseline	Sensitivity range	Rationale
+Occult period (S → O → I)	Brooks-Pollock/Conlan: progression highly uncertain; many cattle may never become infectious. Skin-test conversion typically occurs within 1–9 weeks after infection, but progression to shedding may take months or longer.	120 days	60–240 days	Represents delayed onset of infectiousness while still allowing transmission within a 1-year simulation.
+Infectious period (I → R)	EFSA review and experimental studies indicate infected cattle can shed for extended periods until detected/removed. Movement restrictions eventually remove infectious herds.	180 days	90–365 days	Six months is a reasonable compromise between rapid detection and prolonged infectiousness.
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+State encoding            Movement transmission?
+0 = S (Suscpetible farm)          No
+1 = O (Occult infection)          No (evidence to show can shed during occult - left out for simplicity of model)
+2 = I (Infectious/shedding farm)  Yes
+3 = R (removed)                   No
+
+Updated because in bTB, infection does not immediately = infectiousness (https://pmc.ncbi.nlm.nih.gov/articles/PMC3475695/#s4)
+
+```{r}
+run_soir <- function(
+    movements,
+    seed_farms, # can seed 1+ farms in one run
+    beta = 0.05, # explore 0.001 - 0.05
+    occult_period = 120, # explore 60-240
+    infectious_period = 180 # explore 90 - 135
+){
+  
+    # Build lookup table - pulls every unique farm ID from both the source and destination columns of movements  - combines, removes duplicates, sorts --> (farms) is a clean lookup table of all farms involved in the dataset
+  
+
+  farms <- sort(unique(c(
+    movements$source,
+    movements$destination
+  )))
+# creates a numeric index for the farms, labels each with a number correspondign to the farm ID
+  n_farms <- length(farms)
+
+  farm_index <- seq_len(n_farms)
+  names(farm_index) <- farms
+
+ 
+  ## Convert movements to integer indices ##
+
+
+  movements$source_id <- farm_index[movements$source]
+  movements$dest_id   <- farm_index[movements$destination]
+
+# set up vectors to track each farms disease status and how long it has been in its current state
+  
+  state <- integer(n_farms) # creates a vector of zeros - meaning all farms start susceptible
+
+  days <- integer(n_farms) # creates a parallel vector to count how many days each farm has spent in its current state
+
+ 
+  ## Seed infection - infect chosed seed farm by setting its state to 2 (infectious////////////0)
+
+
+  # Seed selected farms by setting their initial disease state to infectious (state = 2)
+# Reset their disease timers to 0 days, indicating they have just entered the infectious state
+  state[farm_index[seed_farms]] <- 1 # 2 means that seed farms start infectious immediately - want them to start as occult (1)?
+  days[farm_index[seed_farms]] <- 0
+
+
+
+  ## Storage - prepares storage for the simulaiton results
+
+
+  max_day <- max(movements$day) # finds last day in the movement dataset
+
+# history - creates a data frame with one row per day, and columns for the number of farms in each SEIR state, all columns are pre-allocated as integer vectors of length max_day for filling during the simulation
+  
+  history <- data.frame( 
+    day = integer(max_day), 
+    S = integer(max_day),
+    O = integer(max_day),
+    I = integer(max_day),
+    R = integer(max_day)
+  )
+
+  ##########################################################
+  ## Simulation - advances farms through the E -> I -> R stages as each day of the simulation passes
+  ##########################################################
+
+# the 'for' loop runs one iteration per day
+
+  for(day in seq_len(max_day)){
+
+    ########################################################
+    ## Progress exposed farms
+    ########################################################
+# the day counters increase, and farms that have spent more than latent_period days in E become infectious (state == 2) and their day counters reset
+    
+    occult <- which(state == 1)
+
+    if(length(occult) > 0){
+
+      days[occult] <- days[occult] + 1
+
+      become_I <- occult[
+        days[occult] >= occult_period
+      ]
+
+      state[become_I] <- 2
+      days[become_I] <- 0
+
+    }
+
+    ########################################################
+    ## Progress infectious farms
+    ########################################################
+
+    infectious <- which(state == 2)
+
+# Their day counters increase, any farms that have spent more than infectious_period i days in I become removed (state == 3) and their day counters reset    
+    
+    if(length(infectious) > 0){
+
+      days[infectious] <- days[infectious] + 1
+
+      become_R <- infectious[
+        days[infectious] >= infectious_period
+      ]
+
+      state[become_R] <- 3
+      days[become_R] <- 0
+
+    }
+
+    ########################################################
+    ## Today's movements - filters the 'movements' data frame to keep just the rows where 'day' matches the current loop day, giving the set of movements to process for that day.
+    ########################################################
+
+    todays <- movements[movements$day == day, ]
+
+    ########################################################
+    ## Replay movement events - processes each moevment and applies infection-spread rules.
+    # loop over all movements happenning today, for each movement, get the source oand destination farm indices; skip the movement if the source is not infectious (state != 2); skipp the movement if hte destination is not susceptible (state != 0). Only movements from the infectious -> susceptible farms prieed to the transmission step that follows
+    
+
+    if(nrow(todays) > 0){
+
+      for(i in seq_len(nrow(todays))){
+
+        source <- todays$source_id[i]
+        dest   <- todays$dest_id[i]
+
+        ## source not infectious
+        if(state[source] != 2)
+          next
+
+        ## destination already infected
+        if(state[dest] != 0)
+          next
+
+        ####################################################
+        ## Transmission - applies transmission step - an infectious source may infect a susceptible destination. With probability 'beta', the destination farm becomes exposed (stae = 1) and is day counter resets to 0 
+       
+
+        if(runif(1) < beta){
+
+          state[dest] <- 1
+          days[dest] <- 0
+
+        }
+
+      }
+
+    }
+
+    ########################################################
+    ## Save epidemic - logs the SEIR count for the current simulation day - store the day number; count how many farms are S,E,I,R and write those values into the corresponding row of history
+    
+
+    history$day[day] <- day
+    history$S[day] <- sum(state == 0)
+    history$O[day] <- sum(state == 1)
+    history$I[day] <- sum(state == 2)
+    history$R[day] <- sum(state == 3)
+
+  }
+
+  ##########################################################
+  ## Return - returns the simulation output as a structured list
+  
+
+  list(
+
+    history = history, # stores the full day-by-day SEIR counts
+
+    final_states = data.frame( # dataframe listing each farm and its final SEIR state, converts numeric codes (0-3) into labelled factors S,E,I,R
+
+      farm = farms,
+
+      state = factor(
+        state,
+        levels = 0:3,
+        labels = c("S","O","I","R")
+      )
+
+    )
+
+  )
+
+}
+```
+
+```{r}
+# Provide movement data
+
+# read in csv
+library(dplyr)
+
+movements_raw <- read.csv(
+    "RQ1 NO EP.csv",
+    stringsAsFactors = FALSE
+)
+
+```
+```{r}
+# check the structure
+str(movements_raw)
+```
+```{r}
+# create simulation movement  table
+
+movements <- movements_raw %>%
+    select(
+        source = org_id,
+        destination = dest_id,
+        day,
+        total_cattle
+    )
+```
+
+```{r}
+head(movements)
+```
+```{r}
+# convert  farm IDs to chr rather than integer to stop e.g. 1 being  treated differently from 001 in future datasets
+movements <- movements %>%
+    mutate(
+        source = as.character(source),
+        destination = as.character(destination)
+    )
+```
+```{r}
+str(movements)
+```
+```{r}
+# check time period
+range(movements$day)
+```
+```{r}
+# number of movement events
+nrow(movements)
+
+```
+```{r}
+# check movement intensity
+movements %>%
+    count(day) %>%
+    summary()
+
+```
+```{r}
+result <- run_soir(
+    movements,
+    seed_farms = c("2", "300", "193", "65")
+)
+
+head(result$history)
+```
+```{r}
+test <- run_soir(
+  movements = movements,
+  seed_farms = "95",
+  beta = 0.05,
+  occult_period = 120,
+  infectious_period = 180
+)
+```
+```{r}
+max(test$history$I)
+```
+```{r}
+test$history %>%
+    tidyr::pivot_longer(
+        cols = c(S,O,I,R),
+        names_to = "state",
+        values_to = "farms"
+    ) %>%
+    ggplot(
+        aes(
+            x = day,
+            y = farms,
+            colour = state
+        )
+    ) +
+    geom_line(size = 1) +
+    theme_minimal()
+```
+```{r}
+table(test$final_states$state)
+```
+
+```{r}
+# plot the curve
+
+result$history %>%
+    tidyr::pivot_longer(
+        cols = c(S,O,I,R),
+        names_to = "state",
+        values_to = "farms"
+    ) %>%
+    ggplot(
+        aes(
+            x = day,
+            y = farms,
+            colour = state
+        )
+    ) +
+    geom_line(size = 1) +
+    theme_minimal()
+```
+# Sensitivity analysis
+
+https://aab.copernicus.org/articles/53/529/2010/aab-53-529-2010.pdf
+https://www.sciencedirect.com/science/article/pii/S1755436510000460
+
+Because stochastic epidemic models incorporate uncertainty in both disease processes and transmission dynamics, sensitivity analyses are required to determine whether model outputs are robust to variation in uncertain parameters. Similar approaches have been applied in livestock disease simulations, where key epidemiological parameters were varied to evaluate their influence on simulated outbreaks.
+
+Do the farms identified as structural superspreaders consistently generate larger or faster outbreaks across a plausible range of bTB transmission parameters?
+
+The absolute outbreak size changes because β has changed, but the relative ranking remains the same: superspreader farms still produce larger outbreaks than random farms.
+
+Choose baseline parameters from the literature
+  Select biologically plausible values for β, occult period and infectious period based on published bTB studies.
+Run a sensitivity analysis
+  Test a range of plausible values for each parameter.
+  Run 100 stochastic simulations for each parameter combination.
+  Calculate summary statistics (e.g. mean outbreak size, peak infectious farms, epidemic duration).
+  Assess robustness of the results
+  Compare epidemic outcomes across parameter combinations.
+  Determine whether farms identified as structural superspreaders consistently produce larger outbreaks than randomly selected farms.
+If the relative importance of the superspreader farms remains similar across parameter combinations, conclude that the findings are robust to uncertainty in the disease parameters.
+Present the baseline model
+  Use the literature-based baseline parameters for the main simulation results.
+Present the sensitivity analysis as evidence that the conclusions are not driven by those specific parameter values. "The baseline parameter values were selected from published estimates of bovine tuberculosis transmission and progression. Sensitivity analyses were performed across plausible ranges reported in the literature."
+
+Choose to seed infection in known superspreader nodes & random nodes: Select the top 5% of farms by your superspreader metric (or whatever threshold you've defined). For each replicate, randomly choose one farm from this group as the seed. For the comparison, randomly choose one farm from the remainder of the network (or from all farms, depending on your study design).
+
+Because split into 12 months for top 5% ID - choose 1 representative month with typical movement pattern (month 7 - all layers and mid year movements), identify top 5% structural superspreader farms (OD); run sensitivity senarios - alter B/occult period/infectious period; for each parameter combination run 100 sims in top 5% seeder farms in OD and BT (choose one at random) and run 100 sims in random seed farm (not top 5%); compare mean outbreak outcomes across all three - expect to see ranking
+
+```{r}
+# for month 7
+out_degree_top5 <- c("253", "129", "95", "255", "88", "119", "214", "213", "212", "202", "151", "299")
+betweenness_top5 <- c("95", "296", "119", "41", "285", "300", "274", "178", "138", "235", "156")
+random_farms <- c("2", "35", "180", "50", "260", "4", "230", "301", "92", "205", "167", "227")
+```
+
+```{r}
+
+
+# Define sensitivity ranges
+beta_values <- c(0.001, 0.005, 0.01)
+occult_values <- c(60, 120, 240)
+infectious_values <- c(90, 180, 365) # N.B. robust against 365 day (longer that dataset)
+
+# Define seed groups for one month
+seed_groups <- list(
+  out_degree = out_degree_top5,
+  betweenness = betweenness_top5,
+  random = random_farms
+)
+
+# Create simulation scenarios
+scenarios <- expand.grid(
+  beta = beta_values,
+  occult_period = occult_values,
+  infectious_period = infectious_values,
+  seed_type = names(seed_groups),
+  replicate = 1:100
+)
+
+
+# Function to run one simulation
+run_sensitivity <- function(x){
+
+  # select seed farm
+  seed_farm <- sample(
+    seed_groups[[as.character(x$seed_type)]],
+    1
+  )
+
+  # run SOIR model
+  result <- run_soir(
+    movements = movements,
+    seed_farms = seed_farm,
+    beta = x$beta,
+    occult_period = x$occult_period,
+    infectious_period = x$infectious_period
+  )
+
+
+  # Return only summary statistics
+  data.frame(
+    beta = x$beta,
+    occult_period = x$occult_period,
+    infectious_period = x$infectious_period,
+    seed_type = x$seed_type,
+    replicate = x$replicate,
+
+    final_infected = sum(
+      result$final_states$state != "S"
+    ),
+
+    peak_infectious = max(
+      result$history$I
+    )
+  )
+}
+```
+```{r}
+# Run all simulations
+results <- lapply(
+  seq_len(nrow(scenarios)),
+  function(i){
+    run_sensitivity(scenarios[i, ])
+  }
+)
+```
+```{r}
+# add a progress bar - replace above block
+library(pbapply)
+
+results <- pblapply(
+  seq_len(nrow(scenarios)),
+  function(i){
+    run_sensitivity(scenarios[i, ])
+  }
+)
+```
+
+```{r}
+# Combine results
+results <- bind_rows(results)
+```
+```{r}
+results
+```
+```{r}
+results %>%
+  group_by(seed_type, beta, occult_period, infectious_period) %>%
+  summarise(
+    mean_final_I = mean(final_infected),
+    mean_peak_I = mean(peak_infectious)
+  )
+```
+```{r}
+results %>%
+  group_by(seed_type) %>%
+  summarise(
+    mean_final_I = mean(final_infected),
+    mean_peak_I = mean(peak_infectious),
+    sd_final_I = sd(final_infected)
+  )
+```
+
+This table shows that when averaged across all tested parameter combinations and stochastic replicates, simulations seeded in structurally important farms produced larger outbreaks than random farms - therefore, farms identified as structural superspreaders by network metrics appear to increase outbreak potential, even when disease parameters vary
+
+Accross 100 stochastic replicates, farms selected from the top 5% of out-degree and betweeness centrality produced larger outbreaks than randomly selected farms across the tested parameter space. out-degree centrality results in the greatest mean outbreak size, although the difference between centrality measures was small, sugegsting both network characteristcs capture important aspects of transmission
+
+
+
+```{r}
+results %>%
+  group_by(beta, occult_period, infectious_period) %>%
+  summarise(
+    out_degree_mean = mean(final_infected[seed_type == "out_degree"]),
+    betweenness_mean = mean(final_infected[seed_type == "betweenness"]),
+    random_mean = mean(final_infected[seed_type == "random"])
+  )
+```
+```{r}
+# calculate how often the ranking is preserved
+results_summary <- results %>%
+  group_by(beta, occult_period, infectious_period, seed_type) %>%
+  summarise(mean_infected = mean(final_infected))
+
+# Check whether superspreader groups outperform random
+```
+```{r}
+results_summary
+```
+```{r}
+# reshape so each parameter becomes a row and seed types become columns - robustness check
+library(dplyr)
+library(tidyr)
+
+ranking_table <- results %>%
+  group_by(beta, occult_period, infectious_period, seed_type) %>%
+  summarise(
+    mean_infected = mean(final_infected),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = seed_type,
+    values_from = mean_infected
+  )
+```
+```{r}
+ranking_table
+```
+```{r}
+ranking_table %>%
+  summarise(
+    out_degree_better = mean(out_degree > random),
+    betweenness_better = mean(betweenness > random)
+  )
+```
+This means that in 88% of parameter combinations, out_degree seeds caused larger outbreaks than random seeds
+In 88% of parameter combinations, betweeness seeds caused larger outbreaks than random seeds
+
+```{r}
+ranking_table %>%
+  summarise(
+    mean_difference = mean(out_degree - betweenness),
+    max_difference = max(abs(out_degree - betweenness))
+  )
+```
+across all 27 parameter combinations, out_dergee farms produced slightly larger outbreaks on average than betweeness farms
+
+```{r}
+# check distribution differences because mean can hide - robustness check
+ranking_table %>%
+  summarise(
+    out_degree_wins = sum(out_degree > betweenness),
+    betweenness_wins = sum(betweenness > out_degree),
+    ties = sum(out_degree == betweenness)
+  )
+```
+Accross the 27 disease parameter combinations:
+  out_degree performed better in 15/27 (56%) scenarios
+  betweeness performed better in 12/27 (44%) scenarios
+  Neither metric dominated consistently
+  
+Both structural metrics behave similarly and outperform random farms - the sensitivity analysis shows this relationship (whether network position predicts transmission impact), is robust to uncertainty in disease parameters
+
+out-degree has a tendency to produce slightly larger outbreaks, but it is not overwhelmingly superior
+
+
+Sensitivity analysis conclusion:
+  The ranking of high-risk farms was robust to uncertainty in disease parameters: both structural metrics consistently outperformed random farm selection.
+  
+```{r}
+# violin plot across all 8100 simulations to visually show the separation between structural and random introductions
+ggplot(results, aes(
+  x = seed_type,
+  y = final_infected,
+  fill = seed_type
+)) +
+  geom_boxplot() +
+  labs(
+    x = "Seed farm type",
+    y = "Final number of infected farms",
+    title = "Outbreak size following introduction into structurally important farms"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none"
+  )
+```
+For dissertation and sensitivity analysis - final infected farms violin plot (overall outbreak impact) & peak infectious farms violin pot (epidemic intensity)
+
+So - sensitivity analysis has shown robust to changes in parameters, will use:
+
+  beta = 0.005 - middle of test range, avoids assuming very high/very low transmission ans is consistent with bTB being relatively slow to spread compared with acute diseases like FMD
+  
+  occult period = 120 days - intermediate value; bTB has highly variable latency, 4 month period is a reasonable simplification for a farm-level model
+  
+  infectious period = 180 days - intermediate value; allows sifficient time for farms to geenerate secondary infections while avoiding unrealistically long infectiousness
+  
+  
+  
+
+Infectious period	180 days	Intermediate value; allows sufficient time for infectious farms to generate secondary infections while avoiding unrealistically long infectiousness
+
+# NEXT STEP
+
+Main research simulations
+
+"An initial unweighted movement model was developed to evaluate whether network structure alone influenced epidemic outcomes. The model was subsequently extended to incorporate movement volume, allowing transmission probability to scale with the number of cattle moved."
+
+NEED TO ADD WEIGHTS - model 3 in https://www.sciencedirect.com/science/article/pii/S1755436510000460#sec1
