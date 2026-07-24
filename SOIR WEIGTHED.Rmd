@@ -1,0 +1,516 @@
+---
+title: "SOIR WEIGHTED"
+author: "ESINCLAIR"
+date: "2026-07-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+https://pmc.ncbi.nlm.nih.gov/articles/PMC2134254/?page=2 - average period infectiousness
+
+Model base taken from 'SOIR MODEL' - add weighted movements - modify transmission step so that probability depends on total_cattle - https://pmc.ncbi.nlm.nih.gov/articles/PMC1635508/#sec2 - uses formula but for FMD in cattle
+
+https://www.sciencedirect.com/science/article/pii/S1755436510000460#sec1 - 'model 3'
+
+"We assume that the probability of each batch of b animals containing at least one infected animal, m, can be approximated by the binomial distribution, with each animal infected with probability μ, "
+
+m = 1-(1-u)^b
+
+p_transmit = 1-(1-beta)^total_cattle N.B. if interpret beta as per animal transmission probability
+
+There will be two levels of probability:
+
+(a) per animal transmission probability (B) - the probability that one infected animal is a moved batch successfully starts an infection in the destination herd during that movement event - e.g. b = 0.01 -> each infected animal has 1% chance of initiating infection.
+
+(b) Batch level transmission probability - each movement contains multiple cattle (n = total_cattle), the probability that at least one animal succeeds is P(farm infection) = 1-(1-B)^n
+
+  b = 0.01 (1% per animal)
+  batch size = 100 cattle
+  
+  p = 1-(1-0.01)^100 (Green et al https://pmc.ncbi.nlm.nih.gov/articles/PMC1635508/#sec2)
+  p = 1-0.99^100
+  p ~ 0.63
+
+So the movement has a 63% probability of causing infection, because there are 100 opportunities for transmission.
+https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1002730#s4 - supports broader idea of modelling bTB as stochastic transmussion between cattle/herds and using movement/contact structure
+
+B = per animal movement transmission probability
+
+Stochastic compartmental model operating at farm level
+Stochasitc - transmission is random, because infection occurs with probability beta (via runif(1)), so repeated runs can produce different epidemic trajectories.
+Compartmental - Farms occupy one of four compartments: S, O, I, R, and transition between them according to fixed rules.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(pbapply)
+```
+```{r}
+# Weighted SOIR model: beta is a per-animal transmission probability, so larger cattle batches have a higher probability of transmitting infection.
+
+run_soir_weighted <- function(
+    movements,
+    seed_farms, # can seed 1+ farms in one run
+    beta = 0.005, # per-animal transmission probability (varied in sensitivity analysis)
+    occult_period = 120, # fixed from un-weighted sensitivity analysis
+    infectious_period = 180 # fixed from un-weighted sensitivity analysis
+){
+  
+# Build look-up table - pulls every unique farm ID from both the source and destination columns of movements  - combines, removes duplicates, sorts --> (farms) is a clean look-up table of all farms involved in the dataset
+  
+  farms <- sort(unique(c(
+    movements$source,
+    movements$destination
+  )))
+  
+# Creates a numeric index for the farms, labels each with a number corresponding to the farm ID
+  n_farms <- length(farms)
+
+  farm_index <- seq_len(n_farms)
+  names(farm_index) <- farms
+
+# Convert movements to integer indices #
+
+  movements$source_id <- farm_index[movements$source]
+  movements$dest_id   <- farm_index[movements$destination]
+
+# Set up vectors to track each farms disease status and how long it has been in its current state
+  
+  state <- integer(n_farms) # creates a vector of zeros - meaning all farms start susceptible
+
+  days <- integer(n_farms) # creates a parallel vector to count how many days each farm has spent in its current state
+
+# Seed infection - infect chosen seed farm by setting its state to 1 - farms to start as occult - representative of dz introduction
+# Reset their disease timers to 0 days, indicating they have just entered the occult state.
+
+  state[farm_index[seed_farms]] <- 1 # state[farm_index[seed_farms]] <- 1; change seeded farms from susceptible (0) to occult (1)
+
+  days[farm_index[seed_farms]] <- 0 # for the same seeded farm(s), set no. days spent in current dz state to 0 - farm has just become occult at the start of the simulation
+
+# Storage - prepares storage for the simulation results
+
+  max_day <- max(movements$day) # finds last day in the movement data set
+
+# History - creates a data frame with one row per day, and columns for the number of farms in each SOIR state, all columns are pre-allocated as integer vectors of length max_day for filling during the simulation
+  
+  history <- data.frame( 
+    day = integer(max_day), 
+    S = integer(max_day),
+    O = integer(max_day),
+    I = integer(max_day),
+    R = integer(max_day)
+  )
+
+
+# Simulation - advances farms through the O -> I -> R stages as each day of the simulation passes
+# The 'for' loop runs one iteration per day
+
+  for(day in seq_len(max_day)){
+
+
+# Progress occult farms:
+# The day counters increase, and farms that have spent more than/equal to occult_period days in O become infectious (state == 2) and their day counters reset
+    
+    occult <- which(state == 1)
+
+    if(length(occult) > 0){
+
+      days[occult] <- days[occult] + 1 # increments until reaches occult_period -> becomes infectious
+
+      become_I <- occult[
+        days[occult] >= occult_period
+      ]
+
+      state[become_I] <- 2
+      days[become_I] <- 0
+
+    }
+
+# Progress infectious farms
+
+    infectious <- which(state == 2)
+
+# Their day counters increase, any farms that have spent more than infectious_period i days in I become removed (state == 3) and their day counters reset    
+    
+    if(length(infectious) > 0){
+
+      days[infectious] <- days[infectious] + 1
+
+      become_R <- infectious[
+        days[infectious] >= infectious_period
+      ]
+
+      state[become_R] <- 3
+      days[become_R] <- 0
+
+    }
+
+# Today's movements - filters the 'movements' data frame to keep just the rows where 'day' matches the current loop day, giving the set of movements to process for that day.
+
+    todays <- movements[movements$day == day, ]
+
+    
+# Process each movement event. Transmission is only considered from infectious source farms to susceptible destination farms.
+
+
+    
+# Processes each movement event and applies infection-spread rules.
+# loop over all movements happening today, for each movement, get the source and destination farm indices; skip the movement if the source is not infectious (state != 2); skip the movement if the destination is not susceptible (state != 0). Only movements from the infectious -> susceptible farms proceed to the transmission step that follows.
+
+    if(nrow(todays) > 0){
+
+      for(i in seq_len(nrow(todays))){
+
+        source <- todays$source_id[i]
+        dest   <- todays$dest_id[i]
+
+        # source not infectious
+        if(state[source] != 2)
+          next
+
+        # destination already infected
+        if(state[dest] != 0)
+          next
+
+        
+# Transmission block:
+# Calculate the movement-level transmission probability from the batch size.
+# Each animal has an independent probability (beta) of initiating infection
+
+# Stochastic transmission event:
+# runif(1) generates a random number between 0 and 1.
+# If the random value is less than p_transmit, the movement event results in transmission,
+# and the destination farm changes from susceptible (S) to occult (O).
+# This represents a Bernoulli trial where transmission either occurs (1) or does not occur (0).
+# p_transmit is the batch-level probability of infection, derived from the per-animal
+# transmission probability (beta) and number of cattle moved.
+#https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/Uniform, Bernoulli
+
+        # beta = individual animal-level probability
+        # p_transmit = whole batch movement level probability
+       
+        batch_size <- todays$total_cattle[i] # no. cattle moved in this movement event
+        p_transmit <- 1 - (1 - beta)^batch_size # Probability that at least one animal in the batch initiates infection.
+        
+        if(runif(1) < p_transmit){ # raw a random number between 0 and 1; if it is less than p_transmit, infection occurs.
+
+          state[dest] <- 1
+          days[dest] <- 0
+
+        }
+
+      }
+
+    }
+
+# ? eventually include the probability that a moved animal is actually infectious - not neccesserially important for research question
+
+# Save epidemic - logs the SOIR count for the current simulation day - store the day number; count how many farms are S,O,I,R and write those values into the corresponding row of history
+    
+    history$day[day] <- day
+    history$S[day] <- sum(state == 0)
+    history$O[day] <- sum(state == 1)
+    history$I[day] <- sum(state == 2)
+    history$R[day] <- sum(state == 3)
+
+  }
+
+# Return - returns the simulation output as a structured list
+
+  list(
+
+    history = history, # stores the full day-by-day SOIR counts
+
+    final_states = data.frame( # data frame listing each farm and its final SOIR state, converts numeric codes (0-3) into labelled factors S,O,I,R
+
+      farm = farms,
+
+      state = factor(
+        state,
+        levels = 0:3,
+        labels = c("S","O","I","R")
+      )
+
+    )
+
+  )
+
+}
+```
+
+# Provide movement data
+
+```{r}
+# read in csv
+movements_raw <- read.csv(
+    "RQ1 NO EP.csv",
+    stringsAsFactors = FALSE
+)
+
+#head(movements_raw)
+```
+```{r}
+# create simulation movement  table
+
+movements <- movements_raw %>%
+    select(
+        source = org_id,
+        destination = dest_id,
+        day,
+        total_cattle
+    )
+#head(movements)
+```
+
+```{r}
+str(movements)
+```
+```{r}
+# check for missing values
+any(is.na(movements$source_id))
+any(is.na(movements$dest_id))
+```
+```{r}
+#check if any movements contain zero/negative numbers of cattle
+movements %>%
+  filter(total_cattle == 0)
+sum(movements$total_cattle == 0)
+sum(movements$total_cattle < 0)
+
+```
+
+```{r}
+# N.B. this is only running one replicate
+result_weighted <- run_soir_weighted(
+    movements,
+    seed_farms = c("95")
+)
+
+head(result_weighted$history)
+```
+```{r}
+# maximum infected farms
+max(result_weighted$history$I)
+```
+```{r}
+# plot result (uses tidyr - pivot_longer, ggplot), N.B. is only one simulation
+result_weighted$history %>%
+    pivot_longer(
+        cols = c(S,O,I,R),
+        names_to = "state",
+        values_to = "farms"
+    ) %>%
+    ggplot(
+        aes(
+            x = day,
+            y = farms,
+            colour = state
+        )
+    ) +
+    geom_line(size = 1) +
+    theme_minimal()
+```
+
+```{r}
+# final states
+table(result_weighted$final_states$state)
+```
+# Run sensitivity analysis on Beta for per-animal transmission probability
+See 'SOIR MODEL' for references
+
+Want to show: Do the farms identified as structural super spreaders consistently generate larger or faster outbreaks across a plausible range of bTB transmission parameters?
+The absolute outbreak size changes because β has changed, but the relative ranking remains the same: superspreader farms still produce larger outbreaks than random farms.
+
+https://pmc.ncbi.nlm.nih.gov/articles/PMC2366193/#sec2 - Cattle movements can be represented as transmission pathways between farms using stochastic individual/premises-based models
+
+```{r}
+# for month 7 - representative month - identical to last sensitivity analysis
+out_degree_top5 <- c("253", "129", "95", "255", "88", "119", "214", "213", "212", "202", "151", "299")
+betweenness_top5 <- c("95", "296", "119", "41", "285", "300", "274", "178", "138", "235", "156")
+random_farms <- c("2", "35", "180", "50", "260", "4", "230", "301", "92", "205", "167", "227")
+```
+
+Previous sensitivity analysis demonstrated that model outcomes were robust to variation in occult and infectious periods. Therefore, these parameters were fixed at intermediate values, and subsequent sensitivity analysis focused on uncertainty in the newly introduced batch-weighted transmission parameter. Avoid unnecessarily expanding parameter space
+
+
+```{r}
+# Define sensitivity ranges
+beta_values <- c(0.001, 0.005, 0.01, 0.02, 0.05) # sensitivity range for effective per-animal movement transmission probability; selected to represent low transmission intensity expected for bTB
+occult_values <- c(120) # same as non-weighted values
+infectious_values <- c(180) # same as non-weighted values
+
+# Define seed groups for one month
+seed_groups <- list(
+  out_degree = out_degree_top5,
+  betweenness = betweenness_top5,
+  random = random_farms
+)
+
+# Create simulation scenarios - run 100 iterations - stochastic process
+scenarios_weighted <- expand.grid(
+  beta = beta_values,
+  occult_period = occult_values,
+  infectious_period = infectious_values,
+  seed_type = names(seed_groups),
+  replicate = 1:100
+)
+
+
+# Function to run one simulation
+run_sensitivity <- function(x){
+
+  # select seed farm
+  seed_farm <- sample(
+    seed_groups[[as.character(x$seed_type)]],
+    1
+  )
+
+  # run SOIR model
+  result <- run_soir_weighted(
+    movements = movements,
+    seed_farms = seed_farm,
+    beta = x$beta,
+    occult_period = x$occult_period,
+    infectious_period = x$infectious_period
+  )
+
+
+  # Return only summary statistics
+  data.frame(
+    beta = x$beta,
+    occult_period = x$occult_period,
+    infectious_period = x$infectious_period,
+    seed_type = x$seed_type,
+    replicate = x$replicate,
+
+    final_infected = sum(
+      result$final_states$state != "S"
+    ),
+
+    peak_infectious = max(
+      result$history$I
+    )
+  )
+}
+```
+```{r}
+# lapply() runs run_sensitivity once for each row in scenarios weigthed (expand.grid already made 100 copies of each); do.call(rbind...) combines all individual simulation results into single results table. pblapply - adds progress bar
+results2 <- do.call(
+  rbind,
+  pblapply(
+    seq_len(nrow(scenarios_weighted)),
+    function(i){
+      run_sensitivity(scenarios_weighted[i, ])
+    }
+  )
+)
+```
+```{r}
+# Combine results - stacks all the one-row dataframes to create one combined data frame
+# bind_rows = dplyr
+results2 <- bind_rows(results2) 
+#results
+```
+
+Mean outbreak size by seed type:
+  Gives the overall effect across all tested beta/occult/infectious values & stochastic replicates
+```{r}
+OB_by_seedtype <- results2 %>%
+  group_by(seed_type) %>%
+  summarise(
+    mean_outbreak_size = mean(final_infected),
+    sd_outbreak_size = sd(final_infected),
+    mean_peak_infectious = mean(peak_infectious)
+  )
+OB_by_seedtype
+```
+
+Interpret - Across X (check how many run!) simulations, dz introductions into structurally important farms produced larger outbreaks than random introductions, irrespective of parameter changes. 
+
+Robustness across transmission parameter space:
+  Shows the proportion of parameter combinations where structural farms outperform random farms
+
+```{r}
+# reshape so each parameter becomes a row and seed types become columns - robustness check
+
+ranking_table3 <- results2 %>%
+  group_by(beta, occult_period, infectious_period, seed_type) %>%
+  summarise(
+    mean_infected = mean(final_infected),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = seed_type,
+    values_from = mean_infected
+  )
+```
+
+```{r}
+ranking_table3 %>%
+  summarise(
+    out_degree_better = mean(out_degree > random),
+    betweenness_better = mean(betweenness > random)
+  )
+```
+In 100% of tested β scenarios, the mean outbreak size from out-degree seeding was greater than random seeding.
+In 100% of tested β scenarios, the mean outbreak size from betweenness seeding was greater than random seeding.
+
+
+
+The advantage of structurally important farms was maintained across the tested disease parameter space. Outdegree and betweenness farms generated larger outbreaks than random introductions in >99% of parameter combinations
+
+Show effect of changing disease parameters - table grouped by beta because likely to be the biggest driver
+```{r}
+results2 %>%
+  group_by(beta, seed_type) %>%
+  summarise(
+    mean_outbreak_size = mean(final_infected),
+    .groups = "drop"
+  )
+```
+
+Across all tested combinations of transmission probability, (using already assessed values for occult period, and infectious period), structurally important farms consistently generated larger outbreaks than random introductions. Although absolute outbreak sizes increased with higher transmission probabilities and longer infectious periods, the relative advantage of structurally important farms (ranking) remained consistent, supporting the robustness of the selected parameter values for subsequent epidemic sims - the relationship of structurally important farms is robust to uncertainty in disease parameters.
+
+
+Sensitivity analysis conclusion:
+  The ranking of high-risk farms was robust to uncertainty in disease parameters: both structural metrics consistently    outperformed random farm selection.
+  
+```{r}
+# box plot across all 8100 simulations to visually show the separation between structural and random introductions
+ggplot(results2, aes(
+  x = seed_type,
+  y = final_infected,
+  fill = seed_type
+)) +
+  geom_boxplot() +
+  labs(
+    x = "Seed farm type",
+    y = "Final number of infected farms",
+    title = "Outbreak size following introduction into structurally important farms"
+  ) +
+  theme_classic() +
+  theme(
+    legend.position = "none"
+  )
+```
+
+
+# Choosing parameter:
+
+Increasing β increases outbreak size
+This is expected.
+Higher transmission probability produces larger epidemics.
+All β values maintain the expected ordering
+Targeted high-risk farms produce larger outbreaks than random farms.
+The model responds sensibly to changes in transmission intensity.
+Very high β values create very large outbreaks
+β = 0.05 gives mean outbreaks of ~73 farms for out-degree seeding.
+Given bTB is relatively slow-spreading, this may represent a relatively aggressive transmission scenario.
+
+Choose beta = 0.005
+
+A sensitivity analysis was conducted across β values from 0.001 to 0.05. Increasing β resulted in progressively larger outbreaks, while the qualitative pattern of greater spread following seeding of structurally important farms remained consistent. A β value of 0.005 was selected for the main analysis as an intermediate transmission scenario, representing a low transmission probability consistent with the relatively slow spread of bTB

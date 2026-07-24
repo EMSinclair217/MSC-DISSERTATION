@@ -1,0 +1,464 @@
+---
+title: "SIMTEST2"
+author: "ESINCLAIR"
+date: "2026-07-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+https://pmc.ncbi.nlm.nih.gov/articles/PMC3475695/ - SORI model
+https://pmc.ncbi.nlm.nih.gov/articles/instance/2600903/bin/rspb20071601s01.pdf 
+https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004038#pcbi-1004038-g001
+https://pmc.ncbi.nlm.nih.gov/articles/PMC6122770/#Sec5
+https://efsa.onlinelibrary.wiley.com/doi/full/10.2903/j.efsa.2023.8028
+
+https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/Uniform - R Documentation - runif()
+
+file:///C:/Users/errai/Downloads/978-3-540-78911-6_3.pdf - chapter on maths behind models
+Built from work in TEST SIM 2 Rmd
+
+Do farms that are structurally important in the cattle movement network disproportionately contribute to bTB spread over a one-year period?
+
+Hypothesis is:
+
+"Are structurally superspreader farms actually superspreaders when disease dynamics are simulated?"
+
+Basic SEIR model:
+
+not trying to build the most biologically detailed model of bovine TB; trying to compare how different network interventions affect disease spread.
+
+based on:
+Green et al. (2006) — farm-level disease transmission through cattle movements. Modelling the initial spread of foot-and-mouth disease through animal movements
+Green et al 2008 - Estimates for local and movement-based transmission of bovine tuberculosis in British cattle
+Gilbert et al 2005 - This isn't a simulation paper, but it established that cattle movements are a major predictor of bTB occurrence.
+BoTMEW  2018 A new bovine tuberculosis model for England and Wales (BoTMEW), explicitly describe replaying movement data
+Heath et al. (2008) — preserving the temporal sequence of movement events is important
+SimInf (Widgren et al., 2016) — stochastic compartmental models on livestock movement networks.
+
+NETWORK BASED EVENT DRIVEN SEIR MODEL
+A stochastic, farm-level, network-based, movement-driven SEIR compartment model.
+
+PSEUDOCODE FOR WRITE UP - for methods chapter - aim to communicte modelling logic independent of code
+
+Initialise farms
+
+↓
+
+Seed infection
+
+↓
+
+For each day
+
+    Update E→I→R
+
+    Get today's movements
+
+    For each movement
+
+        if source == I
+            if destination == S
+
+                transmit?
+
+↓
+
+Save daily epidemic
+
+↓
+
+Return results
+
+# UPDATE TO INCLUDE BATCH SIZE in future
+Model is farm-level SEIR, not animal level SEIR. each movement is an opportunity for infection to be introduced into the destination herd. more cattle moved = more opportunities for introduction to occur. P(transmission) = 1 - (1-B)^n, where n = batch size.
+
+Interpret Beta as the probability that one infected animal successfully seeds infection in the destination herd. If a batch contains n animals, then the probability of at least one successful transmission becomes P(transmission) = 1-(1-B)^n, where Beta = per animal transmission probabiity; n = number of cattle moved.
+
+
+SO LOOKING AT - structural characteristics of SS identified in network analysis. Impact of removing these nodes from stochastic simulation (that includes probability of transmission based on 'strength'/weighted batch movement)
+
+PROMPT (ChatGPT)
+show me basic complete R code for an SEIR model that tracks btb-like disease spread across nodes (farms). each movement event has a total_cattle batch size. Each farm can send or recieve several batches of cattle per day. I want to be able to seed an infection in a node an view the potential disease spread. I want to be able to remove certain  nodes  identified as superspreaders and compare simulation outcomes. Possibly in the future, I would like to compute probabiltiy of tranmission to be weighted by number of cattle
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+
+```{r}
+# This is base model function from gpt prompt - a SEIR compartment stochastic model - farm level rather than animal level (issues with Movenet/DigiVet)
+
+# Everything in this block is inside the run_seir function
+# takes input:
+  # movement data (movements) and a 
+  # starting infected farm (seed_farm)
+  # transmission probability (beta) 
+  # latent_period - time between becoming infected and infectious - in compartment 'E' - incubating but CANNOT yet infect other farms through  movements - (?make latency move with animal - realistic infection developing further down contact chain?)
+  # infectious period - time spent infectious and capable of transmitting infection before moving into R (removed) - model assumption based on time to detect infected farm. During these 80d - movements from the farm can transmit infection according to beta
+
+run_seir <- function(
+    movements,
+    seed_farm,
+    beta = 0.05, 
+    latent_period = 60, 
+    infectious_period = 180 
+){
+
+
+# Overall timeline if a susceptible farm becomes infected on day 100: 0-99d = susceptible, can't infect others; 100-159d = exposed, can't infect others, 160-339d = infectious, can infect others, 340d onwards = removed, cant infect others
+
+# Build lookup table - pulls every unique farm ID from both the source and destination columns of movements  - combines, removes duplicates, sorts --> (farms) is a clean lookup table of all farms involved in the dataset
+  
+  farms <- sort(unique(c(
+    movements$source,
+    movements$destination
+  )))
+  
+# creates a numeric index for the farms, labels each with a number corresponding to the farm ID
+  n_farms <- length(farms)
+
+  farm_index <- seq_len(n_farms)
+  names(farm_index) <- farms
+
+ 
+# Convert movements to integer indices #
+
+  movements$source_id <- farm_index[movements$source]
+  movements$dest_id   <- farm_index[movements$destination]
+
+  
+# Disease state definitions:
+  
+  # 0 = S = susceptible
+  # 1 = E = exposed
+  # 2 = I = infectious
+  # 3 = R = removed
+
+# set up vectors to track each farms disease status and how long it has been in its current state
+  
+  state <- integer(n_farms) # creates a vector of zeros - meaning all farms start susceptible
+
+  days <- integer(n_farms) # creates a parallel vector to count how many days each farm has spent in its current state
+
+ 
+# Seed infection - infect chosen seed farm by setting its state to 2(I)
+
+  state[farm_index[seed_farm]] <- 2
+
+
+# Storage - prepares storage for the simulation results
+
+  max_day <- max(movements$day) # finds last day in the movement dataset
+
+# History - creates a data frame with one row per day, and columns for the number of farms in each SEIR state, all columns are pre-allocated as integer vectors of length max_day for filling during the simulation
+  
+  history <- data.frame( 
+    day = integer(max_day), 
+    S = integer(max_day),
+    E = integer(max_day),
+    I = integer(max_day),
+    R = integer(max_day)
+  )
+  
+
+
+# Simulation - advances farms through the E -> I -> R stages as each day of the simulation passes
+
+# the 'for' loop runs one iteration per day
+
+  for(day in seq_len(max_day)){
+
+ 
+# Progress exposed farms:
+ 
+# the day counters increase, and farms that have spent more than latent_period days in E become infectious (state == 2) and their day counters reset
+    
+    exposed <- which(state == 1)
+
+    if(length(exposed) > 0){
+
+      days[exposed] <- days[exposed] + 1
+
+      become_I <- exposed[
+        days[exposed] >= latent_period
+      ]
+
+      state[become_I] <- 2
+      days[become_I] <- 0
+
+    }
+
+
+# Progress infectious farms
+
+    infectious <- which(state == 2)
+
+# Their day counters increase, any farms that have spent more than infectious_period i days in I become removed (state == 3) and their day counters reset    
+    
+    if(length(infectious) > 0){
+
+      days[infectious] <- days[infectious] + 1
+
+      become_R <- infectious[
+        days[infectious] >= infectious_period
+      ]
+
+      state[become_R] <- 3
+      days[become_R] <- 0
+
+    }
+
+
+# Today's movements - filters the 'movements' data frame to keep just the rows where 'day' matches the current loop day, giving the set of movements to process for that day.
+
+    todays <- movements[movements$day == day, ]
+
+
+# Replay movement events - processes each movement and applies infection-spread rules.
+# loop over all movements happening today, for each movement, get the source and destination farm indices; skip the movement if the source is not infectious (state != 2); skip the movement if the destination is not susceptible (state != 0). Only movements from the infectious -> susceptible farms proceed to the transmission step that follows
+    
+
+    if(nrow(todays) > 0){
+
+      for(i in seq_len(nrow(todays))){
+
+        source <- todays$source_id[i]
+        dest   <- todays$dest_id[i]
+
+        # source not infectious
+        if(state[source] != 2)
+          next
+
+        # destination already infected - i.e. not susceptible
+        if(state[dest] != 0)
+          next
+
+
+# Transmission - applies transmission step - an infectious source may infect a susceptible destination. With probability 'beta', the destination farm becomes exposed (state = 1) and is day counter resets to 0 
+# https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/Uniform - runif() - generates random number between 0-1, if number is < beta - infection progresses = Bernoulli
+        
+        if(runif(1) < beta){
+
+          state[dest] <- 1
+          days[dest] <- 0
+
+        }
+
+      }
+
+    }
+
+    
+# Save epidemic - logs the SEIR count for the current simulation day - store the day number; count how many farms are S,E,I,R and write those values into the corresponding row of history
+    
+    history$day[day] <- day
+    history$S[day] <- sum(state == 0)
+    history$E[day] <- sum(state == 1)
+    history$I[day] <- sum(state == 2)
+    history$R[day] <- sum(state == 3)
+
+  }
+
+
+# Return - returns the simulation output as a structured list
+  
+  list(
+
+    history = history, # stores the full day-by-day SEIR counts
+
+    final_states = data.frame( # data frame listing each farm and its final SEIR state, converts numeric codes (0-3) into labelled factors S,E,I,R
+
+      farm = farms,
+
+      state = factor(
+        state,
+        levels = 0:3,
+        labels = c("S","E","I","R")
+      )
+
+    )
+
+  )
+
+}
+```
+
+# Provide movement data
+
+```{r}
+# read in csv
+movements_raw <- read.csv(
+    "RQ1 NO EP.csv",
+    stringsAsFactors = FALSE
+)
+# head(movements_raw)
+```
+
+```{r}
+# check the structure
+str(movements_raw)
+```
+```{r}
+# create simulation movement  table
+movements <- movements_raw %>%
+    select(
+        source = org_id,
+        destination = dest_id,
+        day,
+        total_cattle
+    )
+# head(movements)
+```
+
+
+```{r}
+# convert  farm IDs to chr rather than integer to stop e.g. 1 being  treated differently from 001 in future datasets
+movements <- movements %>%
+    mutate(
+        source = as.character(source),
+        destination = as.character(destination)
+    )
+```
+
+```{r}
+# check structure
+str(movements)
+```
+```{r}
+# check time period
+range(movements$day)
+```
+```{r}
+# number of movement events
+nrow(movements)
+```
+
+```{r}
+# check farms that only appear as destinations
+farms <- sort(unique(c(
+    movements$source,
+    movements$destination
+)))
+```
+
+```{r}
+# check movement intensity
+movements %>%
+    count(day) %>%
+    summary()
+```
+# Run simulation
+```{r}
+# N.B.this is only running one replicate of the simulation- being stochastic need to run 100-1000 replicates because each will be slightly different
+result <- run_seir(
+    movements,
+    seed_farm = "285" # choose farm to seed infection - needs updated to allow several farms
+)
+
+head(result$history)
+```
+
+```{r}
+# plot the curve - using ggplot
+
+result$history %>%
+    pivot_longer(
+        cols = c(S,E,I,R),
+        names_to = "state",
+        values_to = "farms"
+    ) %>%
+    ggplot(
+        aes(
+            x = day,
+            y = farms,
+            colour = state
+        )
+    ) +
+    geom_line(size = 1) +
+    theme_minimal()
+```
+```{r}
+result_95 <- run_seir(
+    movements,
+    seed_farm = "95"
+)
+```
+```{r}
+# inspect the outbreak
+result_95$final_states %>%
+    filter(state != "S")
+```
+```{r}
+tail(result_95$history, 1)
+```
+
+
+This plot shows that infection seeded at farm 7, Susceptible (S) declines from ~300 to ~295.
+Exposed (E) rises gradually and peaks at only a few farms.
+Infectious (I) remains low (peaking around 5 farms).
+Removed (R) accumulates to around 5–6 farms by the end.
+So the outbreak seeded at farm 7 caused a small, self-limiting chain of transmission rather than a large epidemic.
+
+That is a plausible outcome for a sparse movement network.
+
+```{r}
+# maximum number infected
+max(result$history$I)
+```
+
+```{r}
+tail(result$history, 1)
+```
+
+
+### NEXT THINGS TO DO - INCOPORTATE WEIGHTED BY CATTLE BATCH SIZE, TUNE TRANSMISSION/LATENT ETC TO BTB, tune parameters to reflect bTB
+ 
+
+Removing superspreaders
+
+```{r}
+remove_nodes <- function(movements, nodes){
+
+  movements[
+    !(movements$source %in% nodes |
+      movements$destination %in% nodes),
+  ]
+
+}
+```
+
+
+# Simulaiton outputs:
+
+epidemic size - number of farms infected/proportion of network infected/cumulative incidence
+
+epidemic spread - time to first 10 farms infected/time to peak infected farms/epidemic duration
+
+node level contribution - for each farm: number of secondary infeciton caused/probability of causing a large outbreak/outbreak size conditional on seed infection
+
+Then compare - structural SS farms vs random farms as initial infection seeds.
+
+A strong test - if infection starts in the top 5% central farms, does the resulting epidemic size exceed epidemics in randomly selected farms?
+
+Implement: transmission_probability <- 1 - (1-beta)^nu_cattle_moved
+and keep network centrality out of the transmission equation.
+
+Then evaluate whether the independently identified SS (network analysis) nodes actually generate: larger outbreaks/faster outbreaks/more secondary infections/higher outbreak probability - means that simulation is testing the network hypothesis rather than assuming it.
+
+
+# DEBUGGING
+```{r}
+result <- run_seir(
+    movements,
+    seed_farm = "7"
+)
+```
+```{r}
+result$final_states %>%
+    filter(state != "S")
+```
