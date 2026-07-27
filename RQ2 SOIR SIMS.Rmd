@@ -1,0 +1,606 @@
+---
+title: "RQ2 SOIR SIMS"
+author: "ESINCLAIR"
+date: "2026-07-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+RQ2 – epidemiological consequences: do structurally important farms actually matter for disease spread - How do structurally identified  superspreader candidate farms influence the scale and dynamics of simulated  bTB-like disease spread compared with random introductions and targeted removal scenarios. - i.e. do structurally important farms acutally matter for disease spread?
+
+# Scenarios - static network analysis - identified farms consistently high-risk - persistence graph accross all 12 months - and run SOIR from day 1 - ?are farms that are consistently structurally important across the whole study period better targets for intervention?
+
+Use data drom RQ1 to define candidate farms - persistent high OD/BT farms. All simulations start same day, same movement period, same B, same SOIR parameters, same number of stochastic replicates
+
+Baseline network - no removal
+
+Remove top 5% out-degree farms
+
+Remove top 5% Betweeness farms
+
+Remove top 5% that appear in both BT & OD
+
+Remove random X farms (control)
+
+For each scenario:
+
+  run 100-1000? stochastic replicates
+  record outcomes - final infected farms, peak infectious farms, time to peak, outbreak duration, epidemic plot
+
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(pbapply)
+```
+
+```{r}
+# Weighted SOIR model: beta is a per-animal transmission probability, so larger cattle batches have a higher probability of transmitting infection.
+
+run_soir_weighted_RQ2 <- function(
+    movements,
+    seed_farms, # can seed 1+ farms in one run
+    beta = 0.005, # beta = 0.005, # per-animal transmission probability (varied in sensitivity analysis)
+    occult_period = 120, # fixed from un-weighted sensitivity analysis
+    infectious_period = 180 # fixed from un-weighted sensitivity analysis
+){
+  
+# Build look-up table - pulls every unique farm ID from both the source and destination columns of movements  - combines, removes duplicates, sorts --> (farms) is a clean look-up table of all farms involved in the dataset
+  
+  farms <- sort(unique(c(
+    movements$source,
+    movements$destination
+  )))
+  
+# Creates a numeric index for the farms, labels each with a number corresponding to the farm ID
+  n_farms <- length(farms)
+
+  farm_index <- seq_len(n_farms)
+  names(farm_index) <- farms
+
+# Convert movements to integer indices #
+
+  movements$source_id <- farm_index[movements$source]
+  movements$dest_id   <- farm_index[movements$destination]
+
+# Set up vectors to track each farms disease status and how long it has been in its current state
+  
+  state <- integer(n_farms) # creates a vector of zeros - meaning all farms start susceptible
+
+  days <- integer(n_farms) # creates a parallel vector to count how many days each farm has spent in its current state
+
+# Seed infection - infect chosen seed farm by setting its state to 1 - farms to start as occult - representative of dz introduction
+# Reset their disease timers to 0 days, indicating they have just entered the occult state.
+
+  state[farm_index[seed_farms]] <- 1 # state[farm_index[seed_farms]] <- 1; change seeded farms from susceptible (0) to occult (1)
+
+  days[farm_index[seed_farms]] <- 0 # for the same seeded farm(s), set no. days spent in current dz state to 0 - farm has just become occult at the start of the simulation
+
+# Storage - prepares storage for the simulation results
+
+  max_day <- max(movements$day) # finds last day in the movement data set
+
+# History - creates a data frame with one row per day, and columns for the number of farms in each SOIR state, all columns are pre-allocated as integer vectors of length max_day for filling during the simulation
+  
+  history <- data.frame( 
+    day = integer(max_day), 
+    S = integer(max_day),
+    O = integer(max_day),
+    I = integer(max_day),
+    R = integer(max_day)
+  )
+
+
+# Simulation - advances farms through the O -> I -> R stages as each day of the simulation passes
+# The 'for' loop runs one iteration per day
+
+  for(day in seq_len(max_day)){
+
+
+# Progress occult farms:
+# The day counters increase, and farms that have spent more than/equal to occult_period days in O become infectious (state == 2) and their day counters reset
+    
+    occult <- which(state == 1)
+
+    if(length(occult) > 0){
+
+      days[occult] <- days[occult] + 1 # increments until reaches occult_period -> becomes infectious
+
+      become_I <- occult[
+        days[occult] >= occult_period
+      ]
+
+      state[become_I] <- 2
+      days[become_I] <- 0
+
+    }
+
+# Progress infectious farms
+
+    infectious <- which(state == 2)
+
+# Their day counters increase, any farms that have spent more than infectious_period i days in I become removed (state == 3) and their day counters reset    
+    
+    if(length(infectious) > 0){
+
+      days[infectious] <- days[infectious] + 1
+
+      become_R <- infectious[
+        days[infectious] >= infectious_period
+      ]
+
+      state[become_R] <- 3
+      days[become_R] <- 0
+
+    }
+
+# Today's movements - filters the 'movements' data frame to keep just the rows where 'day' matches the current loop day, giving the set of movements to process for that day.
+
+    todays <- movements[movements$day == day, ]
+
+    
+# Process each movement event. Transmission is only considered from infectious source farms to susceptible destination farms.
+
+
+    
+# Processes each movement event and applies infection-spread rules.
+# loop over all movements happening today, for each movement, get the source and destination farm indices; skip the movement if the source is not infectious (state != 2); skip the movement if the destination is not susceptible (state != 0). Only movements from the infectious -> susceptible farms proceed to the transmission step that follows.
+
+    if(nrow(todays) > 0){
+
+      for(i in seq_len(nrow(todays))){
+
+        source <- todays$source_id[i]
+        dest   <- todays$dest_id[i]
+
+        # source not infectious
+        if(state[source] != 2)
+          next
+
+        # destination already infected
+        if(state[dest] != 0)
+          next
+
+        
+# Transmission block:
+# Calculate the movement-level transmission probability from the batch size.
+# Each animal has an independent probability (beta) of initiating infection
+
+# Stochastic transmission event:
+# runif(1) generates a random number between 0 and 1.
+# If the random value is less than p_transmit, the movement event results in transmission,
+# and the destination farm changes from susceptible (S) to occult (O).
+# This represents a Bernoulli trial where transmission either occurs (1) or does not occur (0).
+# p_transmit is the batch-level probability of infection, derived from the per-animal
+# transmission probability (beta) and number of cattle moved.
+#https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/Uniform, Bernoulli
+
+        # beta = individual animal-level probability
+        # p_transmit = whole batch movement level probability
+       
+        batch_size <- todays$total_cattle[i] # no. cattle moved in this movement event
+        p_transmit <- 1 - (1 - beta)^batch_size # Probability that at least one animal in the batch initiates infection.
+        
+        if(runif(1) < p_transmit){ # raw a random number between 0 and 1; if it is less than p_transmit, infection occurs.
+
+          state[dest] <- 1
+          days[dest] <- 0
+
+        }
+
+      }
+
+    }
+
+# ? eventually include the probability that a moved animal is actually infectious - not neccesserially important for research question
+
+# Save epidemic - logs the SOIR count for the current simulation day - store the day number; count how many farms are S,O,I,R and write those values into the corresponding row of history
+    
+    history$day[day] <- day
+    history$S[day] <- sum(state == 0)
+    history$O[day] <- sum(state == 1)
+    history$I[day] <- sum(state == 2)
+    history$R[day] <- sum(state == 3)
+
+  }
+
+# Return - returns the simulation output as a structured list
+
+  list(
+
+    history = history, # stores the full day-by-day SOIR counts
+
+    final_states = data.frame( # data frame listing each farm and its final SOIR state, converts numeric codes (0-3) into labelled factors S,O,I,R
+
+      farm = farms,
+
+      state = factor(
+        state,
+        levels = 0:3,
+        labels = c("S","O","I","R")
+      )
+
+    )
+
+  )
+
+}
+```
+
+# Provide movement data
+```{r}
+# read in csv
+
+movements_raw <- read.csv(
+    "RQ1 NO EP.csv",
+    stringsAsFactors = FALSE
+)
+
+#head(movements_raw)
+```
+
+```{r}
+# create simulation movement  table
+
+movements <- movements_raw %>%
+    select(
+        source = org_id,
+        destination = dest_id,
+        day,
+        total_cattle
+    )
+#head(movements)
+```
+
+```{r}
+str(movements)
+```
+
+# Visual of probability x batch size
+https://ggplot2.tidyverse.org/articles/ggplot2.html
+```{r}
+
+beta <- 0.005
+
+df <- data.frame(
+  batch_size = 1:800
+)
+
+df$p_transmit <- 1 - (1 - beta)^df$batch_size
+
+
+ggplot(df, aes(x = batch_size, y = p_transmit)) +
+  geom_line(
+    colour = "firebrick",
+    linewidth = 1.2
+  ) +
+  labs(
+    x = "Cattle moved per batch",
+    y = "Probability of transmission",
+    title = paste0(
+      "Effect of batch size on transmission probability (β = ",
+      beta,
+      ")"
+    )
+  ) +
+  theme_classic()
+```
+```{r}
+# N.B. without 'scenarios... replicates - this is only running ONCE
+result_weighted_RQ2 <- run_soir_weighted_RQ2(
+    movements,
+    seed_farms = c("95")
+)
+
+head(result_weighted_RQ2$history)
+```
+```{r}
+max(result_weighted_RQ2$history$I)
+```
+```{r}
+result_weighted_RQ2$history %>%
+    tidyr::pivot_longer(
+        cols = c(S,O,I,R),
+        names_to = "state",
+        values_to = "farms"
+    ) %>%
+    ggplot(
+        aes(
+            x = day,
+            y = farms,
+            colour = state
+        )
+    ) +
+    geom_line(size = 1) +
+    theme_minimal()
+```
+Epidemic curve- infected per day
+```{r}
+
+ggplot(result_weighted_RQ2$history,
+       aes(x = day, y = I)) +
+  geom_line(
+    colour = "firebrick",
+    linewidth = 1.2
+  ) +
+  labs(
+    x = "Day",
+    y = "Number of infectious farms",
+    title = "Epidemic curve"
+  ) +
+  theme_classic()
+```
+Create workflow to include replicate - modified from sensitivity analysis - COPY AND PASTES BELOW
+
+
+MODIFIED VERSION FOR BASELINE MODEL
+```{r}
+# baseline model parameters - as per  model/sensitivity analysis
+#baseline_b <- 0.005
+#basline_occult <- 120
+#baseline_infect <- 180
+
+# Create baseline scenarios (10 stochastic replicates - test run)
+
+baseline_scenario_grid <- data.frame(
+  replicate = 1:10
+)
+
+# Function to run one baseline simulation
+run_baseline <- function(scenario_row){
+  
+  #print(class(x))
+  #print(x)
+  
+  #Randomly select one seed farm
+  seed_farm <- sample(unique(c(movements$source, movements$destination)),
+                      1
+                      )
+  # Run SOIR model
+  result <- run_soir_weighted_RQ2(
+    movements = movements,
+    seed_farms = seed_farm,
+    beta = 0.005,
+    occult_period = 120,
+    infectious_period = 180
+    )
+  
+  # Daily epidemic output
+  daily_output <- data.frame(
+    replicate = scenario_row$replicate,
+    day = result$history$day,
+    susceptible = result$history$S,
+    infectious = result$history$I,
+    occult = result$history$O,
+    removed = result$history$R,
+    total_infected = result$history$O +
+      result$history$I + 
+      result$history$R
+  )
+  
+  # Summary output
+  summary_output <- data.frame(
+    #scenario = "baseline/scenario name", # change input depending on scenario - keep for stat tests later all in one dataframe
+    replicate = scenario_row$replicate,
+    seed_farm = seed_farm,
+    final_infected = sum(result$final_states$state!= "S"),
+    peak_infectious = max(result$history$I)
+  )
+  
+  # Return both outputs
+  list(
+    daily = daily_output,
+    summary = summary_output
+  )
+  # Return summary statistics
+  #data.frame(
+    #replicate = x$replicate,
+    #seed_farm = seed_farm,
+  #  final_infected = sum(result_baseline_scenarios$final_states$state != "S"),
+   # peak_infectious = max(result_baseline_scenarios$history$I)
+  #)
+}
+```
+
+```{r}
+baseline_results <- pblapply(
+  seq_len(nrow(baseline_scenario_grid)),
+  function(i){
+    run_baseline(baseline_scenario_grid[i, , drop = FALSE])
+  }
+)
+```
+
+
+```{r}
+# daily result - epidemic curves for all 10 stochastic runs
+daily_results <- bind_rows(
+  lapply(baseline_results, function(x) x$daily)
+)
+# peak infectious and final outbreak size per run
+summary_results <- bind_rows(
+  lapply(baseline_results, function(x) x$summary)
+)
+```
+```{r}
+daily_results
+```
+```{r}
+summary_results
+```
+
+BotMEW paper
+
+1. individual stochastic runs plot (example) - shows uncertainty and stochastic variation - demonstrates model variability. Each simulation starts with a randomly selected seed farm and includes random transmission events (runif(1) < p_transmit) - so even with identical parameters, outbreaks will differ.
+
+https://pdodds.w3.uvm.edu/files/papers/others/2001/mackenzie2001.pdf
+
+```{r}
+# 1. plot individual stochastic runs (to show variability)
+ggplot(
+  daily_results,
+  aes(x = day, y = infectious, group = replicate)
+) +
+  geom_line(alpha = 0.3) +
+  labs(
+    x = "Day",
+    y = "Infectious farms",
+    title = "Stochastic epidemic trajectories"
+  ) +
+  theme_classic()
+```
+
+2. Mean +/- SD (uncertainty) epidemic curve - summarises the expected epidemic trajectory across all stochastic replicates (shows expected outbreak dynamics) - calculate 'mean infectious farms on dat 't'' across all simulations. Shows average outbreak progression, when epidemic peaks, how much variability exists around the mean - represents thebehvaiour of the model rather than one random simulation - the mean epidemic curve was calculated across stochastic replicates, with variability represented by the standard deviation of infectious farm numbers at each time step.
+
+https://www.sciencedirect.com/science/article/pii/S0167587797000020
+
+```{r}
+# 2. average number of infectious farms per day
+mean_epidemic <- daily_results %>%
+  group_by(day) %>%
+  summarise(
+    mean_infectious = mean(infectious),
+    sd_infectious = sd(infectious)
+  )
+
+ggplot(mean_epidemic, aes(x = day, y = mean_infectious)) + geom_line(linewidth = 1.2, colour = "firebrick") + labs(
+  x = "Day",
+  y = "Mean epidemic curve across stochastic simulations"
+) +
+  theme_classic()
+```
+
+```{r}
+# 2. add uncertainty
+ggplot(mean_epidemic, aes(x = day, y = mean_infectious)) +
+  geom_ribbon(
+    aes(
+      ymin = mean_infectious - sd_infectious,
+      ymax = mean_infectious + sd_infectious
+    ),
+    alpha = 0.3,
+    fill = "firebrick"
+  ) +
+  geom_line(
+    linewidth = 1.2,
+    colour = "firebrick"
+  ) +
+  labs(
+    x = "Day",
+    y = "Infectious farms",
+    title = "Epidemic curve (mean ± SD)"
+  ) +
+  theme_classic()
+```
+
+3. Final outbreak size distribution - compares scenario impact
+
+Uses output 'summary_results$final_infected - contains the number of farms in each replicate
+Shows the probability distribution of outbreak sizes, whether outbreaks are usually small or occasionally large, whether changing model parameters changes epidemic risk
+
+https://www.sciencedirect.com/science/article/pii/S0167587705000358
+
+```{r}
+ggplot(
+  summary_results,
+  aes(x = final_infected)
+) +
+  geom_density(
+    fill = "steelblue",
+    alpha = 0.4
+  ) + 
+  labs(x = "Final infected farms",
+       y = "Density",
+       title = "Distribution of final outbreak size"
+       ) + 
+  theme_classic()
+```
+
+4. 
+To get line graph showing each compartment- need a mean of stochastic replications - to show mean trajectory across replicates
+
+Need to create baseline_history containing day_by_day history from all 10 runs (with a replciate column) - then can create plot - currently only saved the summary statistics- need the history from each replicate to allow day-by-day epidemic plot
+
+https://www.sciencedirect.com/science/article/pii/S1755436510000460
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+mean_SOIR <- daily_results %>%
+  group_by(day) %>%
+  summarise(
+    mean_S = mean(susceptible),
+    mean_O = mean(occult),
+    mean_I = mean(infectious),
+    mean_R = mean(removed)
+  ) %>%
+  pivot_longer(
+    cols = c(mean_S, mean_O, mean_I, mean_R),
+    names_to = "compartment",
+    values_to = "mean_farms"
+  )
+```
+```{r}
+ggplot(
+  mean_SOIR,
+  aes(
+    x = day,
+    y = mean_farms,
+    colour = compartment
+  )
+)+
+  geom_line(
+    linewidth = 1.2
+  )+
+  labs(
+    x = "Day",
+    y = "Mean number of farms",
+    colour = "Disease state",
+    title = "Mean SOIR epidemic dynamics across stochastic simulations"
+  )+
+  theme_classic()
+```
+5. Stat significance of different scenarios
+
+For comparing scenarios (e.g. different seed farms, removing nodes, changing network structure), need 
+
+(i) multiple stochastic replicates per scenario
+(ii) summary outcome per replicate:
+      final_infected (total outbreak size)
+      peak_infectious
+      ?epidemic duration
+      ?cumulative infected over time
+      
+E.g. compare two scenarios by final outbreak size:
+scenario A - baseline network
+scenario B - network with x type of nodes removed
+
+Would have - baseline_summary & removed_nodes_summary
+
+Then - t-test? but if outbreak size is not normally distributed - likely (stochastic epidemics usually have - many small outbreaks/fewer larger outbreaks) - non-parametric test may be more appropriate - e.g. wilcox test
+
+  wilcox.test(baseline_summary%final_infected, removed_nodes_summary$final_infected)
+
+If compare several interventions - use ?anova? Kruskal-Wallis test?
+
+COMPARE
+
+  primary metric - final infected = overall epidemic impact
+  secondary metric - peak infectious = maximum disease pressure & time to peak = epidemic speed
+
+
+
+
+
+```{r}
+# for month 7 - from sensitivity analysys
+out_degree_top5 <- c("253", "129", "95", "255", "88", "119", "214", "213", "212", "202", "151", "299")
+betweenness_top5 <- c("95", "296", "119", "41", "285", "300", "274", "178", "138", "235", "156")
+random_farms <- c("2", "35", "180", "50", "260", "4", "230", "301", "92", "205", "167", "227")
+```
