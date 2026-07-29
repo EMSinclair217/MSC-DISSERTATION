@@ -194,8 +194,7 @@ run_soir_weighted <- function(
         # p_transmit = whole batch movement level probability
        
         batch_size <- todays$total_cattle[i] # no. cattle moved in this movement event
-        p_transmit <- 1 - (1 - beta)^batch_size # Probability that at least one animal in the batch initiates infection.
-        
+        p_transmit <- 1 - (1 - beta)^batch_size # Probability that at least one animal in the batch initiates  PLOT PROBABILITY AGINST BATCH SIZE FOR WRITE UP
         if(runif(1) < p_transmit){ # raw a random number between 0 and 1; if it is less than p_transmit, infection occurs.
 
           state[dest] <- 1

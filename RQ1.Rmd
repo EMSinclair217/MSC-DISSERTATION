@@ -527,22 +527,102 @@ top5_long <- data.frame(
 )
 
 counts <- table(top5_long$node)
-counts
+counts_sorted <- sort(counts, decreasing = TRUE)
+persistence_distribution <- table(counts)
+counts_sorted
+persistence_distribution
 ```
+
+Reduce label size: barplot(counts, las = 2, cex.names = 0.7, col = "steelblue", main = "Farm Persistence in Top 5% Outdegree", ylab = "Number of Months Appearing in Top 5%", xlab = "Farm ID")
 ```{r}
 barplot(
-  counts,
+  counts_sorted,
   las = 2,
-  col = "steelblue",
+  cex.names = 0.4,
+  col = "forestgreen",
   main = "Farm Persistence in Top 5% Outdegree",
   ylab = "Number of Months Appearing in Top 5%",
   xlab = "Farm ID"
 )
 ```
-shows persistent superspreaders - 119, 284, 285, 95 - all appear 10+ times in top 5% by outdegree across all onths
 
 
-Do the same for Betweeness?
+shows (temporal persistence of structural importance) persistent superspreaders - 119, 284, 285, 95 - all appear 10+ times in top 5% by outdegree across all months
+Farms with 12 months are consistenlty high out_degree farms across the year, farms with 1-2 momths are more transiently important. The long tail (many farms appear briefly, few farms appearing repeatedly) - indicates dynamic network heterogeneity
+
+Look at persistence distribution to help choose cut off for RQ2
+
+```{r}
+persistence_df <- data.frame(
+  months = as.numeric(names(persistence_distribution)),
+  farms = as.numeric(persistence_distribution)
+)
+
+ggplot(persistence_df, aes(x = months, y = farms)) +
+  geom_col() +
+  labs(
+    x = "Number of months appearing in top 5% outdegree",
+    y = "Number of farms",
+    title = "Persistence distribution of high outdegree farms"
+  ) +
+  theme_classic()
+```
+
+Supports that structural importance is heterogenous over time - many farms are occasioanlly highly connected, but a small subset repeatedly emerge as highly central
+
+CARE in RQ2 - if removing a small number of farms (e.g. >8mo), risk of interpeting a null result as significant when actually, becaise so few nodes were removed, chance were never involved?
+
+Create lists for scenarios in RQ2
+```{r}
+OD_persistence <- data.frame(
+  farm = names(counts), # farm IDs
+  months_top5 = as.numeric(counts) # numebr of months each farm appeared in the top 5% betweeness list
+)
+```
+```{r}
+# farms in top 5% OD 8 or more months
+OD_high_persistence <- OD_persistence %>%
+  filter(months_top5 >= 8) %>%
+  pull(farm)
+# saved in current working directory
+saveRDS(
+  OD_high_persistence,
+  "outdegree_high_persistent.rds"
+)
+
+OD_high_persistence
+length(OD_high_persistence) # number removed
+```
+```{r}
+# Farms in top 5% OD & appear in 6 or more months
+OD_med_persistence <- OD_persistence %>%
+  filter(months_top5 >= 6) %>%
+  pull(farm)
+
+saveRDS(
+  OD_med_persistence, "Outdegree_med_persistent.rds"
+)
+
+OD_med_persistence
+length(OD_med_persistence) # number removed
+```
+```{r}
+# Farms in top 5% OD & appear in any months
+OD_all_candidates <- OD_persistence %>%
+  filter(months_top5 >= 1) %>%
+  pull(farm)
+
+saveRDS(
+  OD_all_candidates, "outdegree_all_candidates.rds"
+)
+
+OD_all_candidates
+length(OD_all_candidates) # number removed
+```
+
+
+
+Do the same for Betweeness
 ```{r}
 # install.packages("randomcoloR")
 library(randomcoloR)
@@ -598,24 +678,100 @@ colnames(top5_table) <- paste0("Month_", seq_along(monthly_top5_padded))
 top5_table
 ```
 ```{r}
-top5_long <- data.frame(
+top5_long_BT <- data.frame(
   month = rep(1:12, sapply(monthly_top5_betw, length)),
   node  = unlist(monthly_top5_betw)
 )
 
-counts_BT <- table(top5_long$node)
+counts_BT <- table(top5_long_BT$node)
+counts_BT_sorted <- sort(counts_BT, decreasing = TRUE)
+persistence_distribution_BT <- table(counts_BT)
 counts_BT
+persistence_distribution_BT
 ```
 ```{r}
 barplot(
-  counts_BT,
+  counts_BT_sorted,
   las = 2,
-  col = "steelblue",
+  cex.names = 0.4,
+  col = "forestgreen",
   main = "Farm Persistence in Top 5% Betweeness",
   ylab = "Number of Months Appearing in Top 5%",
   xlab = "Farm ID"
 )
 ```
+?maximum should be 7 months?
+```{r}
+persistence_df_BT <- data.frame(
+  months = as.numeric(names(persistence_distribution_BT)),
+  farms = as.numeric(persistence_distribution_BT)
+)
+
+ggplot(persistence_df_BT, aes(x = months, y = farms)) +
+  geom_col() +
+  labs(
+    x = "Number of months appearing in top 5% betweeness",
+    y = "Number of farms",
+    title = "Persistence distribution of high betweeness farms"
+  ) +
+  theme_classic()
+```
+
+
+# Create data for RQ2
+
+```{r}
+BT_persistence <- data.frame(
+  farm = names(counts_BT), # farm IDs
+  months_top5 = as.numeric(counts_BT) # numebr of months each farm appeared in the top 5% betweeness list
+)
+```
+
+```{r}
+# farms in top 5% BT >= 6 months
+BT_high_persistence <- BT_persistence %>%
+  filter(months_top5 >= 6) %>%
+  pull(farm)
+# saved in current working directory
+saveRDS(
+  BT_high_persistence,
+  "BT_high_persistent.rds"
+)
+
+BT_high_persistence
+length(BT_high_persistence) # numebr removed
+```
+```{r}
+# Farms in top 5% BT & appear in 4 or more months
+BT_med_persistence <- BT_persistence %>%
+  filter(months_top5 >= 4) %>%
+  pull(farm)
+# saved in current working directory
+saveRDS(
+  BT_med_persistence,
+  "BT_med_persistent.rds"
+)
+
+BT_med_persistence
+length(BT_med_persistence) # number removed
+```
+```{r}
+# Farms in top 5% BT & appear in any months
+BT_any_persistence <- BT_persistence %>%
+  filter(months_top5 >= 1) %>%
+  pull(farm)
+# saved in current working directory
+saveRDS(
+  BT_any_persistence,
+  "BT_any_persistent.rds"
+)
+
+BT_any_persistence
+length(BT_any_persistence) # number removed
+```
+
+
+
 Create comparison table:
 
 ```{r}
@@ -655,6 +811,12 @@ comparison$in_both <- with(comparison,
                            !is.na(betweenness_count) & !is.na(outdegree_count))
 ```
 ```{r}
+#extract combined farm IDs
+combined_farms <- comparison %>%
+  filter(in_both) %>%
+  pull(node)
+```
+```{r}
 # sort by silent spreader behaviour - high BT, low OD
 comparison$SSI <- comparison$betweenness_count / (comparison$outdegree_count + 1)
 
@@ -666,6 +828,65 @@ comparison_sorted
 
 SSI = BT/1-OD - this needs changed so dont get SSI = NA - need all outdegree number etc
 Calculate a silent spreader index?
+
+# Extract combined farms for RQ2
+
+```{r}
+# extract combined persistent farm IDs (appearing in both groups for >=6 months)
+combined_med_persistent <- comparison %>%
+  filter(
+    betweenness_count >= 4,
+    outdegree_count >= 6
+  ) %>%
+  pull(node)
+
+# saved in current working directory
+saveRDS(
+  combined_med_persistent,
+  "Combined_med_persistent.rds"
+)
+
+combined_med_persistent
+length(combined_med_persistent) # number removed
+```
+```{r}
+# extract combined persistent farm IDs (appearing in both groups for >=6 months)
+combined_high_persistent <- comparison %>%
+  filter(
+    betweenness_count >= 6,
+    outdegree_count >= 8
+  ) %>%
+  pull(node)
+
+# saved in current working directory
+saveRDS(
+  combined_high_persistent,
+  "Combined_high_persistent.rds"
+)
+
+combined_high_persistent
+length(combined_high_persistent) # number removed
+```
+
+```{r}
+# extract all combined any months
+# extract combined persistent farm IDs (appearing in both groups for >=6 months)
+combined_all_persistent <- comparison %>%
+  filter(
+    betweenness_count >= 1,
+    outdegree_count >= 1
+  ) %>%
+  pull(node)
+
+# saved in current working directory
+saveRDS(
+  combined_all_persistent,
+  "Combined_all_persistent.rds"
+)
+
+combined_all_persistent
+length(combined_all_persistent) # number removed
+```
 
 # B (II)
  standardise metrics and use parallel plot to show outdegree, strengthout, betweeness of nodes across month - highlight top 5% in red
@@ -843,7 +1064,7 @@ monthly_plots_ODTOP5 <- lapply(monthly_top5_OD, function(m) {
 ```
 ```{r}
 ### 3. View the highlight plot for any month
-monthly_plots_ODTOP5[[1]]
+monthly_plots_ODTOP5[[6]]
 ```
 ```{r}
 ### 4. Extract ONLY the top 5% farms (Outdegree)
@@ -887,7 +1108,7 @@ monthly_plots_top5_OD <- lapply(monthly_top5_only_OD, function(m) {
 ```
 ```{r}
 ### 7. View any month (e.g., Month 9)
-monthly_plots_top5_OD[[12]]
+monthly_plots_top5_OD[[6]]
 ```
   
 Any farms with:
@@ -939,7 +1160,7 @@ monthly_plots_BTTOP5 <- lapply(monthly_top5_BT, function(m) {
 
 ```{r}
 # view any month
-monthly_plots_BTTOP5[[9]]
+monthly_plots_BTTOP5[[6]]
 # all red because if all = 0 then all in top 5% (for months 1-5 before cow-calf starts)
 ```
 ```{r}
@@ -981,7 +1202,7 @@ monthly_plots_top5_BT <- lapply(monthly_top5_only_BT, function(m) {
 ```
 ```{r}
 # view any month
-monthly_plots_top5_BT[[12]] # for months 1-5 plot not visible because legend is so big
+monthly_plots_top5_BT[[11]] # for months 1-5 plot not visible because legend is so big
 ```
 Shows top 5% farms based on betweeness - and plotted across BT, OD, ST
 
