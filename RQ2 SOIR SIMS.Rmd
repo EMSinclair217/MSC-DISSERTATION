@@ -1220,7 +1220,10 @@ scenario_1_results <- pblapply(
       "Baseline" # description of scenario - see look up table
     )
   }
+  
 )
+
+saveRDS(scenario_1_results, "scenario_1_results.rds")
 ```
 
 ```{r}
@@ -1256,6 +1259,8 @@ scenario_2_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_2_results, "scenario_2_results.rds")
 ```
 
 
@@ -1292,6 +1297,8 @@ scenario_3_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_3_results, "scenario_3_results.rds")
 ```
 
 
@@ -1326,6 +1333,8 @@ scenario_4_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_4_results, "scenario_4_results.rds")
 ```
 
 
@@ -1359,6 +1368,8 @@ scenario_5_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_5_results, "scenario_5_results.rds")
 ```
 
 
@@ -1393,6 +1404,8 @@ scenario_6_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_6_results, "scenario_6_results.rds")
 ```
 
 
@@ -1427,6 +1440,8 @@ scenario_7_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_7_results, "scenario_7_results.rds")
 ```
 
 
@@ -1460,6 +1475,8 @@ scenario_8_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_8_results, "scenario_8_results.rds")
 ```
 
 
@@ -1494,6 +1511,8 @@ scenario_9_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_9_results, "scenario_9_results.rds")
 ```
 
 
@@ -1528,6 +1547,8 @@ scenario_10_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_10_results, "scenario_10_results.rds")
 ```
 
 
@@ -1562,6 +1583,8 @@ scenario_11_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_11_results, "scenario_11_results.rds")
 ```
 ```{r}
 # combine the daily outputs from all 2000 sim replicates into one data frame
@@ -1593,6 +1616,8 @@ scenario_12_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_12_results, "scenario_12_results.rds")
 ```
 ```{r}
 # combine the daily outputs from all 2000 sim replicates into one data frame
@@ -1624,6 +1649,8 @@ scenario_13_results <- pblapply(
     )
   }
 )
+
+saveRDS(scenario_13_results, "scenario_13_results.rds")
 ```
 ```{r}
 # combine the daily outputs from all 2000 sim replicates into one data frame
@@ -1893,6 +1920,28 @@ length(unique(c(movements$source, movements$destination)))
 
 length(unique(c(scenario_11$source, scenario_11$destination)))
 ```
+
+## NEXT STEPS 31/07/26
+
+1. compare epidemic curves (use daily_results_SCx) - plot mean number infectious farms through time (?+confidence intervals) for each scenario --> how big outbreak becomes & how quickly spread when peak. Care with mean & median as heavy right tail here. Also consider mean of 2000 sims - outbreaks will behave differently
+
+2. compare the distrbution of outbreak sizes - looking at mean, median, interquartile range, boxplot, histogram - ?does targeted removal reduce the frequency of the larger outbreaks - relate to superspreading
+
+3. Peak infectious farms - compare across scenarios - lower peak = fewer farms simultaneously infectious = surveillance control
+
+4. probability of a large outbreak - define threshold for mean outbreak size = "large outbreak", compare the probability of a "large outbreak" across scenarios
+
+  create comparison table to show importance of structurally important farms driving superspreading - calculate proportion of simulations exceeding different outbreak-size threshold (e.g. >5/10/20 farms) for each scenario - ?does targeted removal reduce the likelihood of the largest outbreaks?
+
+5. show control comparison - compare to baseline/random removal/targeted removal
+
+6. calculate relative reduction from baseline, percentage reductions rather than just mean
+
+7. silent spreader index - ?structural network metric - capture farms with high bridging influence (high betweenness) but low outward movement volume (low outdegree). Farms that don't look risky from movement counts alone, but are structurally positioned to spread disease quietly. SSI = betweeness/(outdegree +1) - +1 prevents division by zero & emphasise low outdegree farms
+
+7. statistical analysis - see above note - want effect size & p-values. Look at paper discussing reporting of epidemic outcomes 
+
+
 # PLOTS
 ```{r}
 # 1. plot individual stochastic epidemic trajectories (to show variability)

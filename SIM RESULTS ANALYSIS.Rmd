@@ -1,0 +1,896 @@
+---
+title: "SIM RESULTS ANALYSIS"
+author: "ESINCLAIR"
+date: "2026-07-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Import results of simulations for analysis - avoid having to re-run the sims
+
+# Scenario 1 - Baseline
+
+```{r}
+# load results from sim
+scenario_1_results <- readRDS("scenario_1_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC1 <- bind_rows( 
+  lapply(scenario_1_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC1 <- bind_rows(
+  lapply(scenario_1_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC1)
+head(summary_results_SC1)
+```
+
+# Scenario 2 - Outdegree (high) >= 8 months
+
+```{r}
+# load results from sim
+scenario_2_results <- readRDS("scenario_2_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC2 <- bind_rows( 
+  lapply(scenario_2_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC2 <- bind_rows(
+  lapply(scenario_2_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC2)
+head(summary_results_SC2)
+```
+
+# Scenario 3 - Outdegree (med) >= 6 months
+
+```{r}
+# load results from sim
+scenario_3_results <- readRDS("scenario_3_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC3 <- bind_rows( 
+  lapply(scenario_3_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC3 <- bind_rows(
+  lapply(scenario_3_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC3)
+head(summary_results_SC3)
+```
+
+# Scenario 4 - Outdegree any month
+
+```{r}
+# load results from sim
+scenario_4_results <- readRDS("scenario_4_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC4 <- bind_rows( 
+  lapply(scenario_4_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC4 <- bind_rows(
+  lapply(scenario_4_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC4)
+head(summary_results_SC4)
+```
+
+# Scenario 5 - Betweenness (high) >= 6 months
+
+```{r}
+# load results from sim
+scenario_5_results <- readRDS("scenario_5_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC5 <- bind_rows( 
+  lapply(scenario_5_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC5 <- bind_rows(
+  lapply(scenario_5_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC5)
+head(summary_results_SC5)
+```
+
+# Scenario 6 - Betweenness (med) >= 4 months
+
+```{r}
+# load results from sim
+scenario_6_results <- readRDS("scenario_6_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC6 <- bind_rows( 
+  lapply(scenario_6_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC6 <- bind_rows(
+  lapply(scenario_6_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC6)
+head(summary_results_SC6)
+```
+
+# Scenario 7 - Betweenness any month
+
+```{r}
+# load results from sim
+scenario_7_results <- readRDS("scenario_7_results.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC7 <- bind_rows( 
+  lapply(scenario_7_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC7 <- bind_rows(
+  lapply(scenario_7_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC7)
+head(summary_results_SC7)
+```
+
+# Scenario 8 - Combined (high) BT >= 6 months & OD >= 8 months
+
+```{r}
+# load results from sim
+scenario_8_results <- readRDS("scenario_8_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC8 <- bind_rows( 
+  lapply(scenario_8_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC8 <- bind_rows(
+  lapply(scenario_8_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC8)
+head(summary_results_SC8)
+```
+
+# Scenario 9 - Combined (med) BT>= 4 months & 0D >= 6 months
+
+```{r}
+# load results from sim
+scenario_9_results <- readRDS("scenario_9_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC9 <- bind_rows( 
+  lapply(scenario_9_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC9 <- bind_rows(
+  lapply(scenario_9_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC9)
+head(summary_results_SC9)
+```
+
+# Scenario 10 - Combined any month
+
+```{r}
+# load results from sim
+scenario_10_results <- readRDS("scenario_10_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC10 <- bind_rows( 
+  lapply(scenario_10_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC10 <- bind_rows(
+  lapply(scenario_10_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC10)
+head(summary_results_SC10)
+```
+
+CONTROLS - If I remove the same number of farms, is targeted removal (SC2-10) more effective than random removal?
+
+# Scenario 11 - control High - random 4 farms (average of scenarios 3/6/9) = 4.33 (4)
+
+```{r}
+# load results from sim
+scenario_11_results <- readRDS("scenario_11_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC11 <- bind_rows( 
+  lapply(scenario_11_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC11 <- bind_rows(
+  lapply(scenario_11_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC11)
+head(summary_results_SC11)
+```
+
+# Scenario 12 - control med - random 9 farms (average of scenarios 2/5/8) = 9.33 (9)
+
+```{r}
+# load results from sim
+scenario_12_results <- readRDS("scenario_12_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC12 <- bind_rows( 
+  lapply(scenario_12_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC12 <- bind_rows(
+  lapply(scenario_12_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC12)
+head(summary_results_SC12)
+```
+
+
+# Scenario 13 - random 40 farms (average of scenarios 4/7/10) = 40.33 (40)
+
+```{r}
+# load results from sim
+scenario_13_results <- readRDS("scenario_13_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC13 <- bind_rows( 
+  lapply(scenario_13_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC13 <- bind_rows(
+  lapply(scenario_13_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC13)
+head(summary_results_SC13)
+```
+
+# SCENARIO COMPARISONS
+
+```{r}
+# mean final outbreak size
+# relative reduction = ((2.8756 - 2.0625)/2.8765)x100
+print("Baseline")
+mean(summary_results_SC1$final_infected)
+print("Outdegree: High, Med, All")
+mean(summary_results_SC2$final_infected)
+mean(summary_results_SC3$final_infected)
+mean(summary_results_SC4$final_infected)
+print("Betweenness: High, Med, All")
+mean(summary_results_SC5$final_infected)
+mean(summary_results_SC6$final_infected)
+mean(summary_results_SC7$final_infected)
+print("Combined: High, Med, All")
+mean(summary_results_SC8$final_infected)
+mean(summary_results_SC9$final_infected)
+mean(summary_results_SC10$final_infected)
+print("Control: High (-4), Med (-9), All (-40)")
+mean(summary_results_SC11$final_infected)
+mean(summary_results_SC12$final_infected)
+mean(summary_results_SC13$final_infected)
+```
+
+```{r}
+# proportion of sims with onward transmission - gives probability that a randomly introduced infection spreads beyond the initial farm
+print("Baseline")
+mean(summary_results_SC1$final_infected >1)
+print("Outdegree: High, Med, All")
+mean(summary_results_SC2$final_infected >1)
+mean(summary_results_SC3$final_infected >1)
+mean(summary_results_SC4$final_infected >1)
+print("Betweenness: High, Med, All")
+mean(summary_results_SC5$final_infected >1)
+mean(summary_results_SC6$final_infected >1)
+mean(summary_results_SC7$final_infected >1)
+print("Combined: High, Med, All")
+mean(summary_results_SC8$final_infected >1)
+mean(summary_results_SC9$final_infected >1)
+mean(summary_results_SC10$final_infected >1)
+print("Control: High(-4), Med(-9), All(-40")
+mean(summary_results_SC11$final_infected >1)
+mean(summary_results_SC12$final_infected >1)
+mean(summary_results_SC13$final_infected >1)
+```
+PLOT
+```{r}
+# Proportion of simulations with onward transmission (>1 infected farm)
+
+onward_transmission <- data.frame(
+  Strategy = c(
+    "Baseline",
+    "Outdegree - High",
+    "Outdegree - Medium",
+    "Outdegree - All",
+    "Betweenness - High",
+    "Betweenness - Medium",
+    "Betweenness - All",
+    "Combined - High",
+    "Combined - Medium",
+    "Combined - All",
+    "Control - High (-4)",
+    "Control - Medium (-9)",
+    "Control - All (-40)"
+  ),
+  
+  Probability_over1 = c(
+    mean(summary_results_SC1$final_infected > 1),
+    mean(summary_results_SC2$final_infected > 1),
+    mean(summary_results_SC3$final_infected > 1),
+    mean(summary_results_SC4$final_infected > 1),
+    mean(summary_results_SC5$final_infected > 1),
+    mean(summary_results_SC6$final_infected > 1),
+    mean(summary_results_SC7$final_infected > 1),
+    mean(summary_results_SC8$final_infected > 1),
+    mean(summary_results_SC9$final_infected > 1),
+    mean(summary_results_SC10$final_infected > 1),
+    mean(summary_results_SC11$final_infected > 1),
+    mean(summary_results_SC12$final_infected > 1),
+    mean(summary_results_SC13$final_infected > 1)
+  )
+)
+
+# convert to percentage
+onward_transmission$Probability <- onward_transmission$Probability * 100
+
+onward_transmission
+```
+```{r}
+library(ggplot2)
+
+ggplot(onward_transmission,
+       aes(x = Strategy,
+           y = Probability)) +
+  geom_col(fill = "steelblue") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ylab("Probability of onward transmission (%) >1") +
+  xlab("")
+```
+
+
+
+```{r}
+# probability of a large outbreak - with defined threshold
+print("Baseline")
+mean(summary_results_SC1$final_infected >6)
+print("Outdegree: High, Med, All")
+mean(summary_results_SC2$final_infected >6)
+mean(summary_results_SC3$final_infected >6)
+mean(summary_results_SC4$final_infected >6)
+print("Betweenness: High, Med, All")
+mean(summary_results_SC5$final_infected >6)
+mean(summary_results_SC6$final_infected >6)
+mean(summary_results_SC7$final_infected >6)
+print("Combined: High, Med, All")
+mean(summary_results_SC8$final_infected >6)
+mean(summary_results_SC9$final_infected >6)
+mean(summary_results_SC10$final_infected >6)
+print("Control: High (-4), Med (-9), All (-40)")
+mean(summary_results_SC11$final_infected >6)
+mean(summary_results_SC12$final_infected >6)
+mean(summary_results_SC13$final_infected >6)
+```
+
+```{r}
+# Proportion of simulations with onward transmission (>1 infected farm)
+
+onward_transmission_10 <- data.frame(
+  Strategy_10 = c(
+    "Baseline",
+    "Outdegree - High",
+    "Outdegree - Medium",
+    "Outdegree - All",
+    "Betweenness - High",
+    "Betweenness - Medium",
+    "Betweenness - All",
+    "Combined - High",
+    "Combined - Medium",
+    "Combined - All",
+    "Control - High (-4)",
+    "Control - Medium (-9)",
+    "Control - All (-40)"
+  ),
+  
+  Probability_over10 = c(
+    mean(summary_results_SC1$final_infected > 10),
+    mean(summary_results_SC2$final_infected > 10),
+    mean(summary_results_SC3$final_infected > 10),
+    mean(summary_results_SC4$final_infected > 10),
+    mean(summary_results_SC5$final_infected > 10),
+    mean(summary_results_SC6$final_infected > 10),
+    mean(summary_results_SC7$final_infected > 10),
+    mean(summary_results_SC8$final_infected > 10),
+    mean(summary_results_SC9$final_infected > 10),
+    mean(summary_results_SC10$final_infected > 10),
+    mean(summary_results_SC11$final_infected > 10),
+    mean(summary_results_SC12$final_infected > 10),
+    mean(summary_results_SC13$final_infected > 10)
+  )
+)
+
+# convert to percentage
+onward_transmission_10$Probability_over10 <- onward_transmission_10$Probability_over10 * 100
+
+onward_transmission_10
+```
+```{r}
+library(ggplot2)
+
+ggplot(onward_transmission_10,
+       aes(x = Strategy_10,
+           y = Probability_over10)) +
+  geom_col(fill = "steelblue") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ylab("Probability of onward transmission (%) >10") +
+  xlab("")
+```
+```{r}
+# MEDIAN final outbreak size
+# relative reduction = ((2.8756 - 2.0625)/2.8765)x100
+print("Baseline")
+median(summary_results_SC1$final_infected)
+print("Outdegree: High, Med, All")
+median(summary_results_SC2$final_infected)
+median(summary_results_SC3$final_infected)
+median(summary_results_SC4$final_infected)
+print("Betweenness: High, Med, All")
+median(summary_results_SC5$final_infected)
+median(summary_results_SC6$final_infected)
+median(summary_results_SC7$final_infected)
+print("Combined: High, Med, All")
+median(summary_results_SC8$final_infected)
+median(summary_results_SC9$final_infected)
+median(summary_results_SC10$final_infected)
+print("Control: High (-4), Med (-9), All (-40)")
+median(summary_results_SC11$final_infected)
+median(summary_results_SC12$final_infected)
+median(summary_results_SC13$final_infected)
+```
+Median - likely meas that epidemic size distributions are highly zero/one dominated - more than 50% of simulations infected only one farm, regardless of intervention strategy - common in stochastic epidemic models because many introductions die out early - median not sensitive enough? Mean at least captures differences better because it reflects the contribution of the larger outbreaks. Change to - 'when an epidemic establishes - how large does it become?' - avoids the large number of fade-outs masking the effect. Create table with mean final size, median final size, %>10 farms
+
+Interquartile range - summary measure - can be more informative than mean because distributions are skewed - will show the spread of the middle 50% of simulations - can show that although median is identical (because many outbreaks die out), the upper tail of outbreak sizes is reduced by intervention - then report median (IQR) - gives the median plus informaiton about the spread of hte data
+
+stat analysis - proportion of simulations with final epidemic size >10 farms - binomial GLM (logistic regresison) & report odds ratio AND secondary outcome - final epidemic size among successful outbreaks - and compare final sizes - wilcoxon rank-sum test (two strategies)/kurskal-wallis test (multiple strategies)
+
+```{r}
+# upper tail outbreak size - does removing important farms reduce rare but large superspreading events
+# values below which a certain percentage of the 2,000 simulation runs fall.
+# e.g. 90th percentile = 8: 90% of simulation runs ended with 8 or fewer infected individuals. The remaining 10% had more than 8.
+
+print("Baseline")
+quantile(
+  summary_results_SC1$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+print("Outdegree: High, Med, All")
+quantile(
+  summary_results_SC2$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+
+quantile(
+  summary_results_SC3$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+
+quantile(
+  summary_results_SC4$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+print("Betweenness: High, Med, All")
+quantile(
+  summary_results_SC5$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+
+quantile(
+  summary_results_SC6$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+
+quantile(
+  summary_results_SC7$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+print("Combined: High, Med, All")
+
+quantile(
+  summary_results_SC8$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+
+quantile(
+  summary_results_SC9$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+
+quantile(
+  summary_results_SC10$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+print("Control: High, Med, All")
+quantile(
+  summary_results_SC11$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+
+print("Control: High (-4), Med (-9), All (-40)")
+quantile(
+  summary_results_SC12$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+
+quantile(
+  summary_results_SC13$final_infected,
+  probs = c(0.9, 0.95, 0.99)
+)
+```
+
+```{r}
+# peak infectious farms
+print("Baseline")
+summary(summary_results_SC1$peak_infectious)
+print("Outdegree: High, Med, All")
+summary(summary_results_SC2$peak_infectious)
+summary(summary_results_SC3$peak_infectious)
+summary(summary_results_SC4$peak_infectious)
+print("Betweenness: High, Med, All")
+summary(summary_results_SC5$peak_infectious)
+summary(summary_results_SC6$peak_infectious)
+summary(summary_results_SC7$peak_infectious)
+print("Combined: High, Med, All")
+summary(summary_results_SC8$peak_infectious)
+summary(summary_results_SC9$peak_infectious)
+summary(summary_results_SC10$peak_infectious)
+print("Control: High (-4), Med (-9), All (-40)")
+summary(summary_results_SC11$peak_infectious)
+summary(summary_results_SC12$peak_infectious)
+summary(summary_results_SC13$peak_infectious)
+```
+
+Plot every simulation - stochastic epidemic curves
+```{r}
+# 1. plot individual stochastic epidemic trajectories (to show variability)
+ggplot(
+  daily_results_SC1,
+  aes(x = day, y = infectious, group = replicate)
+) +
+  geom_line(alpha = 0.3) +
+  labs(
+    x = "Day",
+    y = "Infectious farms",
+    title = "SC1 stochastic epidemic trajectories"
+  ) +
+  theme_classic()
+```
+
+```{r}
+#library(dplyr)
+#library(ggplot2)
+
+daily_all <- bind_rows(
+  mutate(daily_results_SC1,  Scenario = "SC1 Baseline"),
+  mutate(daily_results_SC2,  Scenario = "SC2 Outdegree High"),
+  mutate(daily_results_SC3,  Scenario = "SC3 Outdegree Med"),
+  mutate(daily_results_SC4,  Scenario = "SC4 Outdegree All"),
+  #mutate(daily_results_SC5,  Scenario = "SC5 Betweenness High"),
+  #mutate(daily_results_SC6,  Scenario = "SC6 Betweenness Med"),
+  #mutate(daily_results_SC7,  Scenario = "SC7 Betweenness All"),
+  #mutate(daily_results_SC8,  Scenario = "SC8 Combined High"),
+  #mutate(daily_results_SC9,  Scenario = "SC9 Combined Med"),
+  #mutate(daily_results_SC10, Scenario = "SC10 Combined All"),
+  #mutate(daily_results_SC11, Scenario = "SC11 Control High"),
+  #mutate(daily_results_SC12, Scenario = "SC12 Control Med"),
+  #mutate(daily_results_SC13, Scenario = "SC13 Control All")
+)
+
+ggplot(
+  daily_all,
+  aes(x = day, y = infectious, group = replicate)
+) +
+  geom_line(alpha = 0.02) +
+  facet_wrap(~Scenario, ncol = 4) +
+  labs(
+    x = "Day",
+    y = "Infectious farms"
+  ) +
+  theme_classic()
+```
+```{r}
+#library(dplyr)
+#library(ggplot2)
+
+daily_all <- bind_rows(
+  mutate(daily_results_SC1,  Scenario = "SC1 Baseline"),
+  #mutate(daily_results_SC2,  Scenario = "SC2 Outdegree High"),
+  #mutate(daily_results_SC3,  Scenario = "SC3 Outdegree Med"),
+  #mutate(daily_results_SC4,  Scenario = "SC4 Outdegree All"),
+  mutate(daily_results_SC5,  Scenario = "SC5 Betweenness High"),
+  mutate(daily_results_SC6,  Scenario = "SC6 Betweenness Med"),
+  mutate(daily_results_SC7,  Scenario = "SC7 Betweenness All"),
+  #mutate(daily_results_SC8,  Scenario = "SC8 Combined High"),
+  #mutate(daily_results_SC9,  Scenario = "SC9 Combined Med"),
+  #mutate(daily_results_SC10, Scenario = "SC10 Combined All"),
+  #mutate(daily_results_SC11, Scenario = "SC11 Control High"),
+  #mutate(daily_results_SC12, Scenario = "SC12 Control Med"),
+  #mutate(daily_results_SC13, Scenario = "SC13 Control All")
+)
+
+ggplot(
+  daily_all,
+  aes(x = day, y = infectious, group = replicate)
+) +
+  geom_line(alpha = 0.02) +
+  facet_wrap(~Scenario, ncol = 4) +
+  labs(
+    x = "Day",
+    y = "Infectious farms"
+  ) +
+  theme_classic()
+```
+```{r}
+#library(dplyr)
+#library(ggplot2)
+
+daily_all <- bind_rows(
+  mutate(daily_results_SC1,  Scenario = "SC1 Baseline"),
+  #mutate(daily_results_SC2,  Scenario = "SC2 Outdegree High"),
+  #mutate(daily_results_SC3,  Scenario = "SC3 Outdegree Med"),
+  #mutate(daily_results_SC4,  Scenario = "SC4 Outdegree All"),
+  #mutate(daily_results_SC5,  Scenario = "SC5 Betweenness High"),
+  #mutate(daily_results_SC6,  Scenario = "SC6 Betweenness Med"),
+  #mutate(daily_results_SC7,  Scenario = "SC7 Betweenness All"),
+  mutate(daily_results_SC8,  Scenario = "SC8 Combined High"),
+  mutate(daily_results_SC9,  Scenario = "SC9 Combined Med"),
+  mutate(daily_results_SC10, Scenario = "SC10 Combined All"),
+  #mutate(daily_results_SC11, Scenario = "SC11 Control High"),
+  #mutate(daily_results_SC12, Scenario = "SC12 Control Med"),
+  #mutate(daily_results_SC13, Scenario = "SC13 Control All")
+)
+
+ggplot(
+  daily_all,
+  aes(x = day, y = infectious, group = replicate)
+) +
+  geom_line(alpha = 0.02) +
+  facet_wrap(~Scenario, ncol = 4) +
+  labs(
+    x = "Day",
+    y = "Infectious farms"
+  ) +
+  theme_classic()
+```
+```{r}
+# 3. final outbreak size distribution
+ggplot(
+  summary_results_SC1,
+  aes(x = final_infected) # uses the final number of infected farms at the end of each sim
+) +
+  geom_density(
+    fill = "steelblue",
+    alpha = 0.4
+  ) + 
+  labs(x = "Final infected farms", # per sim
+       y = "Density", # how common each outbreak size is
+       title = "SC_1 Distribution of final outbreak size"
+       ) + 
+  theme_classic()
+```
+```{r}
+library(dplyr)
+library(ggplot2)
+
+summary_all <- bind_rows(
+  mutate(summary_results_SC1,  Scenario = "SC1 Baseline"),
+  mutate(summary_results_SC2,  Scenario = "SC2 Outdegree High"),
+  mutate(summary_results_SC3,  Scenario = "SC3 Outdegree Med"),
+  mutate(summary_results_SC4,  Scenario = "SC4 Outdegree All"),
+  #mutate(summary_results_SC5,  Scenario = "SC5 Betweenness High"),
+  #mutate(summary_results_SC6,  Scenario = "SC6 Betweenness Med"),
+  #mutate(summary_results_SC7,  Scenario = "SC7 Betweenness All"),
+  #mutate(summary_results_SC8,  Scenario = "SC8 Combined High"),
+  #mutate(summary_results_SC9,  Scenario = "SC9 Combined Med"),
+  #mutate(summary_results_SC10, Scenario = "SC10 Combined All"),
+  #mutate(summary_results_SC11, Scenario = "SC11 Control High"),
+  #mutate(summary_results_SC12, Scenario = "SC12 Control Med"),
+  #mutate(summary_results_SC13, Scenario = "SC13 Control All")
+)
+
+ggplot(
+  summary_all,
+  aes(x = final_infected)
+) +
+  geom_density(
+    fill = "steelblue",
+    alpha = 0.4
+  ) +
+  facet_wrap(~Scenario, ncol = 4) +
+  labs(
+    x = "Final infected farms",
+    y = "Density"
+  ) +
+  theme_classic()
+```
+```{r}
+summary_all <- bind_rows(
+  mutate(summary_results_SC1,  Scenario = "SC1 Baseline"),
+  #mutate(summary_results_SC2,  Scenario = "SC2 Outdegree High"),
+  #mutate(summary_results_SC3,  Scenario = "SC3 Outdegree Med"),
+  #mutate(summary_results_SC4,  Scenario = "SC4 Outdegree All"),
+  mutate(summary_results_SC5,  Scenario = "SC5 Betweenness High"),
+  mutate(summary_results_SC6,  Scenario = "SC6 Betweenness Med"),
+  mutate(summary_results_SC7,  Scenario = "SC7 Betweenness All"),
+  #mutate(summary_results_SC8,  Scenario = "SC8 Combined High"),
+  #mutate(summary_results_SC9,  Scenario = "SC9 Combined Med"),
+  #mutate(summary_results_SC10, Scenario = "SC10 Combined All"),
+  #mutate(summary_results_SC11, Scenario = "SC11 Control High"),
+  #mutate(summary_results_SC12, Scenario = "SC12 Control Med"),
+  #mutate(summary_results_SC13, Scenario = "SC13 Control All")
+)
+
+ggplot(
+  summary_all,
+  aes(x = final_infected)
+) +
+  geom_density(
+    fill = "steelblue",
+    alpha = 0.4
+  ) +
+  facet_wrap(~Scenario, ncol = 4) +
+  labs(
+    x = "Final infected farms",
+    y = "Density"
+  ) +
+  theme_classic()
+```
+
+```{r}
+summary_all <- bind_rows(
+  mutate(summary_results_SC1,  Scenario = "SC1 Baseline"),
+  #mutate(summary_results_SC2,  Scenario = "SC2 Outdegree High"),
+  #mutate(summary_results_SC3,  Scenario = "SC3 Outdegree Med"),
+  #mutate(summary_results_SC4,  Scenario = "SC4 Outdegree All"),
+  #mutate(summary_results_SC5,  Scenario = "SC5 Betweenness High"),
+  #mutate(summary_results_SC6,  Scenario = "SC6 Betweenness Med"),
+  #mutate(summary_results_SC7,  Scenario = "SC7 Betweenness All"),
+  mutate(summary_results_SC8,  Scenario = "SC8 Combined High"),
+  mutate(summary_results_SC9,  Scenario = "SC9 Combined Med"),
+  mutate(summary_results_SC10, Scenario = "SC10 Combined All"),
+  #mutate(summary_results_SC11, Scenario = "SC11 Control High"),
+  #mutate(summary_results_SC12, Scenario = "SC12 Control Med"),
+  #mutate(summary_results_SC13, Scenario = "SC13 Control All")
+)
+
+ggplot(
+  summary_all,
+  aes(x = final_infected)
+) +
+  geom_density(
+    fill = "steelblue",
+    alpha = 0.4
+  ) +
+  facet_wrap(~Scenario, ncol = 4) +
+  labs(
+    x = "Final infected farms",
+    y = "Density"
+  ) +
+  theme_classic()
+```
+## NEXT STEPS 31/07/26 - see plot code in RQ2 SOIR SIMS
+
+WHAT IS QUESTION LOOKING TO ANSWER? can present all results and then draw out questions want to answer - simplier for stats
+
+(i) create graph to show distribution and 5% threshold cut off when selecting superspreaders - RQ1 - see RQ1
+(ii) once have completed stat analysis- if measureable significant difference between OD & BT.
+
+Measurement variables - final epidemic size (number of farms infected) & likelihood of sustained onward transmission (e.g. proportion of sims infection >X number of farms)
+
+Epidemic sizes often non-normal (non-parametric dist) & zero-inflated - wilcoxon rank-sum test (two strategies); krusal-wallis test (3+ groups); generalised linear models
+
+  e.g. wilcox.test(epidemic_size ~ intervention, data = results) - where intervention is "OD" or "BT"
+  
+Test the difference in sustained onward transmission probability - outocme is binary per simulation (1=epidemic infected >10 farms; 0 = epidemic did not) - binomial model: glm(sustained ~ intervention, famiy = binomial, data = results)
+
+1. compare epidemic curves (use daily_results_SCx) - plot mean number infectious farms through time (?+confidence intervals) for each scenario --> how big outbreak becomes & how quickly spread when peak. Care with mean & median as heavy right tail here. Also consider mean of 2000 sims - outbreaks will behave differently
+
+2. compare the distrbution of outbreak sizes - looking at mean, median, interquartile range, boxplot, histogram - ?does targeted removal reduce the frequency of the larger outbreaks - relate to superspreading
+
+3. Peak infectious farms - compare across scenarios - lower peak = fewer farms simultaneously infectious = surveillance control
+
+4. probability of a large outbreak - define threshold for mean outbreak size = "large outbreak", compare the probability of a "large outbreak" across scenarios
+
+  create comparison table to show importance of structurally important farms driving superspreading - calculate proportion of simulations exceeding different outbreak-size threshold (e.g. >5/10/20 farms) for each scenario - ?does targeted removal reduce the likelihood of the largest outbreaks?
+
+5. show control comparison - compare to baseline/random removal/targeted removal
+
+6. calculate relative reduction from baseline, percentage reductions rather than just mean
+
+7. silent spreader index - ?structural network metric - capture farms with high bridging influence (high betweenness) but low outward movement volume (low outdegree). Farms that don't look risky from movement counts alone, but are structurally positioned to spread disease quietly. SSI = betweene ss/(outdegree +1) - +1 prevents division by zero & emphasise low outdegree farms
+
+7. statistical analysis - see above note - want effect size & p-values. Look at paper discussing reporting of epidemic outcomes 
+
+wilcox - non parametric t-test
+anova is parametric (assumes normal distribution) - kriscall wallace (medians) - compare 3 different things - will tell difference or no difference but not where is; 2-way anova - compare tx to definition of thing? Need to then compare where difference is - look up test Friedman test = two way anova

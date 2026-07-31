@@ -98,7 +98,7 @@ plot_movement_network <- function(df, month_label = "XX") {
     g,
     layout = lay,
     vertex.color = cols,
-    vertex.label = V(g)$name,
+    vertex.label = NA,# V(g)$name - change to this if want ID numbers printed
     vertex.size = 25,
     vertex.label.cex = 0.9,
     edge.arrow.size = 0.5
@@ -179,6 +179,18 @@ g_M12_RQ1 <- plot_movement_network(Q12_M12_RQ1, "Month 12")
 
 #par(mfrow = c(1, 1))   # reset afterwards
 ```
+```{r}
+png("Month8_Movement_Network.png",
+    width = 2000,
+    height = 1500,
+    res = 300)
+
+plot_movement_network(Q12_M8_RQ1, "Month 8")
+
+dev.off()
+getwd()
+```
+
 
 # COMPUTE NETWORK METRICS HERE
 compute network metrics to show consistency in structure - structural features - density/component size/diameter, presence/absence of cycles etc. In theory - will set up argument that the network does exhibit structural heterogeneity over time.
@@ -513,6 +525,60 @@ top5_table <- do.call(cbind, monthly_top5_padded)
 colnames(top5_table) <- paste0("Month_", seq_along(monthly_top5_padded))
 top5_table
 ```
+```{r}
+# histogram with 95th percentile marked
+par(mfrow = c(3,4), mar = c(4,4,3,1))
+
+for(i in seq_along(monthly_metrics)){
+
+  m <- monthly_metrics[[i]]
+
+  cutoff <- quantile(m$outdegree, 0.95)
+
+  hist(m$outdegree,
+       breaks = 20,
+       main = paste("Month", i),
+       xlab = "Out-degree",
+       col = "lightblue",
+       border = "white")
+
+  abline(v = cutoff, col = "red", lwd = 2, lty = 2)
+
+  legend("topright",
+         legend = paste0("95th percentile = ", round(cutoff,1)),
+         lty = 2,
+         col = "red",
+         bty = "n")
+}
+```
+
+```{r}
+# the red dashed line indicates the rank corresponding to the top 5% of farms by outdegree
+# ranked out degree plot to look at 5% threshold
+par(mfrow = c(3,4), mar = c(4,4,3,1)) # plotting window for grid
+
+for(i in seq_along(monthly_metrics)){ # loops through each months network metrics stored in monthly_metrics
+
+  m <- monthly_metrics[[i]]
+
+  deg <- sort(m$outdegree, decreasing = TRUE) # sorts farms descending by OD
+
+  plot(deg,
+       type = "l",
+       lwd = 2,
+       xlab = "Farm rank",
+       ylab = "Out-degree",
+       main = paste("Month", i))
+  
+ # cutoff <- quantile(deg, 0.95) # this makes top 5% by quantile not count - DIFFERENT be sure to include in methodolgy
+  
+  #cutoff_rank <- max(which(deg >= cutoff))
+
+  cutoff_rank <- ceiling(0.05 * length(deg)) # calculates the rank corresponding to the top 5% of farms - by count as per rest of analysis
+
+  abline(v = cutoff_rank, col = "red", lty = 2, lwd = 2) # vertical dashed line a 5% threshold
+}
+```
 Comparison table: 
   rows= rank positions - 1st most conencted etc
   columns = months
@@ -553,6 +619,7 @@ Farms with 12 months are consistenlty high out_degree farms across the year, far
 Look at persistence distribution to help choose cut off for RQ2
 
 ```{r}
+library(ggplot2)
 persistence_df <- data.frame(
   months = as.numeric(names(persistence_distribution)),
   farms = as.numeric(persistence_distribution)
@@ -676,6 +743,34 @@ monthly_top5_padded <- lapply(monthly_top5_betw, function(x) {
 top5_table <- do.call(cbind, monthly_top5_padded)
 colnames(top5_table) <- paste0("Month_", seq_along(monthly_top5_padded))
 top5_table
+```
+
+```{r}
+# the red dashed line indicates the rank corresponding to the top 5% of farms by BETWEENNESS
+# ranked BETWEENNESS plot to look at 5% threshold
+par(mfrow = c(3,4), mar = c(4,4,3,1)) # plotting window for grid
+
+for(i in seq_along(monthly_metrics)){ # loops through each months network metrics stored in monthly_metrics
+
+  m_BT <- monthly_metrics[[i]]
+
+  deg_BT <- sort(m_BT$betweenness, decreasing = TRUE) # sorts farms descending by BT
+
+  plot(deg_BT,
+       type = "l",
+       lwd = 2,
+       xlab = "Farm rank",
+       ylab = "Betweenness",
+       main = paste("Month", i))
+  
+ # cutoff <- quantile(deg, 0.95) # this makes top 5% by quantile not count - DIFFERENT be sure to include in methodolgy
+  
+  #cutoff_rank <- max(which(deg >= cutoff))
+
+  cutoff_rank_BT <- ceiling(0.05 * length(deg_BT)) # calculates the rank corresponding to the top 5% of farms - by count as per rest of analysis
+
+  abline(v = cutoff_rank_BT, col = "red", lty = 2, lwd = 2) # vertical dashed line a 5% threshold
+}
 ```
 ```{r}
 top5_long_BT <- data.frame(
@@ -1059,12 +1154,12 @@ monthly_plots_ODTOP5 <- lapply(monthly_top5_OD, function(m) {
     geom_line(alpha = 0.6) +
     scale_colour_manual(values = c("FALSE" = "grey70", "TRUE" = "red")) +
     theme_minimal() +
-    ggtitle("Parallel Coordinates — Top 5% Highlighted (Outdegree)")
+    ggtitle("Top 5% Highlighted (Outdegree)") #"Parallel Coordinates — Top 5% Highlighted (Outdegree)"
 })
 ```
 ```{r}
 ### 3. View the highlight plot for any month
-monthly_plots_ODTOP5[[6]]
+monthly_plots_ODTOP5[[8]]
 ```
 ```{r}
 ### 4. Extract ONLY the top 5% farms (Outdegree)
@@ -1154,13 +1249,13 @@ monthly_plots_BTTOP5 <- lapply(monthly_top5_BT, function(m) {
     geom_line(alpha = 0.6) +
     scale_colour_manual(values = c("FALSE" = "grey70", "TRUE" = "red")) +
     theme_minimal() +
-    ggtitle("Parallel Coordinates — Top 5% Highlighted (Betweenness)")
+    ggtitle("Top 5% Highlighted (Betweenness)") # "Parallel Coordinates — Top 5% Highlighted (Betweenness)"
 })
 ```
 
 ```{r}
 # view any month
-monthly_plots_BTTOP5[[6]]
+monthly_plots_BTTOP5[[8]]
 # all red because if all = 0 then all in top 5% (for months 1-5 before cow-calf starts)
 ```
 ```{r}
