@@ -847,6 +847,7 @@ scenario_table <- data.frame(
     length(CB_high_candidates),
     length(CB_all_candidates)
   )
+  %_of_all_farms
 )
 
 scenario_table

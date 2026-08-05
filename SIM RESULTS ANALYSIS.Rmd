@@ -859,12 +859,146 @@ ggplot(
   ) +
   theme_classic()
 ```
+
+```{r}
+# 2(a). mean/median epidemic curve with 5th-95th percentile uncertainty ribbon
+# Calculate mean and uncertainty bounds across stochastic simulations
+mean_epidemic_SC1 <- daily_results_SC1 %>%
+  group_by(day) %>%
+  summarise(
+    mean_infectious = mean(infectious),
+    median_infectious = median(infectious),
+    p5_infectious = quantile(infectious, 0.05),
+    p95_infectious = quantile(infectious, 0.95)
+  )
+
+# Plot mean epidemic curve with 5-95% stochastic range
+ggplot(mean_epidemic_SC1, aes(x = day, y = mean_infectious)) +
+  geom_ribbon(
+    aes(
+      ymin = p5_infectious,
+      ymax = p95_infectious
+    ),
+    alpha = 0.3,
+    fill = "firebrick"
+  ) +
+  geom_line(
+    linewidth = 1.2,
+    colour = "firebrick"
+  ) +
+    geom_line(
+    aes(y = median_infectious),
+    linewidth = 1.2,
+    colour = "forestgreen",
+    linetype = "dashed"
+  ) +
+  labs(
+    x = "Day",
+    y = "Mean infectious farms",
+    title = "SC1 epidemic curve (mean with 5th–95th percentile range)"
+  ) +
+  theme_classic()
+```
+```{r}
+# Combine all daily results
+daily_all <- bind_rows(
+  mutate(daily_results_SC1,  Scenario = "SC1 Baseline"),
+  mutate(daily_results_SC2,  Scenario = "SC2 Outdegree High"),
+  mutate(daily_results_SC3,  Scenario = "SC3 Outdegree Med"),
+  mutate(daily_results_SC4,  Scenario = "SC4 Outdegree All"),
+  #mutate(daily_results_SC5,  Scenario = "SC5 Betweenness High"),
+  #mutate(daily_results_SC6,  Scenario = "SC6 Betweenness Med"),
+  #mutate(daily_results_SC7,  Scenario = "SC7 Betweenness All"),
+  #mutate(daily_results_SC8,  Scenario = "SC8 Combined High"),
+  #mutate(daily_results_SC9,  Scenario = "SC9 Combined Med"),
+  #mutate(daily_results_SC10, Scenario = "SC10 Combined All"),
+  #mutate(daily_results_SC11, Scenario = "SC11 Control High"),
+  #mutate(daily_results_SC12, Scenario = "SC12 Control Med"),
+  #mutate(daily_results_SC13, Scenario = "SC13 Control All")
+)
+
+# Calculate daily summary statistics for each scenario
+mean_epidemic_all <- daily_all %>%
+  group_by(Scenario, day) %>%
+  summarise(
+    mean_infectious   = mean(infectious),
+    median_infectious = median(infectious),
+    p5_infectious     = quantile(infectious, 0.05),
+    p95_infectious    = quantile(infectious, 0.95),
+    .groups = "drop"
+  )
+
+# Plot
+ggplot(mean_epidemic_all,
+       aes(x = day, y = mean_infectious)) +
+  geom_ribbon(
+    aes(ymin = p5_infectious,
+        ymax = p95_infectious),
+    fill = "firebrick",
+    alpha = 0.3
+  ) +
+  geom_line(
+    colour = "firebrick",
+    linewidth = 1
+  ) +
+  geom_line(
+    aes(y = median_infectious),
+    colour = "forestgreen",
+    linewidth = 1,
+    linetype = "dashed"
+  ) +
+  facet_wrap(~Scenario, ncol = 4) +
+  labs(
+    x = "Day",
+    y = "Infectious farms"
+  ) +
+  theme_classic()
+```
 ## NEXT STEPS 31/07/26 - see plot code in RQ2 SOIR SIMS
 
-WHAT IS QUESTION LOOKING TO ANSWER? can present all results and then draw out questions want to answer - simplier for stats
+WHAT IS QUESTION LOOKING TO ANSWER? can present all results and then draw out questions want to answer - simplier for stats - identifying temporally persistent superspreaders in a dynamic cattle movement network and evaluating whether they are effective intervention targets for bTB control.
 
 (i) create graph to show distribution and 5% threshold cut off when selecting superspreaders - RQ1 - see RQ1
 (ii) once have completed stat analysis- if measureable significant difference between OD & BT.
+
+Question - how does removing structurally important farms change the scale and dynamic of outbreaks - SIZE & DYNAMIC
+
+STORY - removing structurally important farms decreases the likelihood of epidemic establishment, limits outbreak size when transmission occurs, and decereases epidemic intensity
+PLUS show size of largest connected component after node removal --> network level validation --> WHY epidemic changed - e.g. BT removal fragmented the network (keep separate from main dz outbreak)
+
+Epidemic outcomes:
+
+1. probability of a major outbreak (epidemic establishment)
+
+  Outcome - proportion of simulaitons producing major outbreaks - need to select threshhold
+  model = ? binomial GLM
+  https://fmch.bmj.com/content/fmch/9/Suppl_1/e001290.full.pdf
+  
+2. final outbreak size (outbreak magnitude)
+
+  Outcome - final infected farms among successful outbreaks
+  model = non-parametric compariso/negative binomial GLM
+  file:///C:/Users/errai/Downloads/KobayashionStochasticModeling-arXiv.pdf Stochastic Modeling of an Infectious Disease
+Part I: Understand the Negative Binomial Distribution
+and Predict an Epidemic More Reliably
+  
+3. peak prevalence (epidemic intensity)
+
+  Outcome - maximum simulatneously infectious farms
+  model = non-parametric comparison/negative binomial GLM
+  
+Methods consistent with livestock disease modelling - reviews of livestock contact network models show that these models are commonly used to evaluate how netowrk structure influences disease dissemination and common intervention strategies
+https://pmc.ncbi.nlm.nih.gov/articles/PMC3771899/#s2
+https://royalsocietypublishing.org/rsif/article/20/202/20220890/90378/Simulating-contact-networks-for-livestock-disease
+https://pmc.ncbi.nlm.nih.gov/articles/PMC6558568/
+https://www.sciencedirect.com/science/article/pii/S0167587722000770
+https://link.springer.com/article/10.1186/s12917-019-1962-1
+https://peerj.com/articles/16998/ - glm
+https://pmc.ncbi.nlm.nih.gov/articles/PMC1635475/#sec7 - non-parametric
+https://onlinelibrary.wiley.com/doi/full/10.1111/tbed.13841 - non-parametric kruskal wallis & dunn posthoc "The contribution on containing the epidemic spread by each network-based target surveillance strategy was evaluated by comparison of the final spread cascade distributions at December 2018 using a nonparametric Kruskal–Wallis test followed by Dunn's post hoc test, where the p-values below 5% were significant."
+https://www.sciencedirect.com/science/article/pii/S0167587718306391#sec0010 - mann whitney test
+https://www.sciencedirect.com/science/article/pii/S0167587713000287 - see statistical analysis in materials and methods
+https://www.sciencedirect.com/science/article/pii/S0167587713000640 - non-parametric mann kendall
 
 Measurement variables - final epidemic size (number of farms infected) & likelihood of sustained onward transmission (e.g. proportion of sims infection >X number of farms)
 
