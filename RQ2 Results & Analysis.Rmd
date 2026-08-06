@@ -1,0 +1,1225 @@
+---
+title: "RQ2 Results & Analysis"
+author: "ESINCLAIR"
+date: "2026-08-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+# libraries
+library(igraph)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(pbapply)
+```
+
+Import results of simulations for anlysis (RQ2 SOIR SIMS)
+
+```{r}
+scenario_1_results <- readRDS("scenario_1_results.rds") # baseline
+scenario_2_results <- readRDS("scenario_2_results.rds") # Outdegree (high) >= 8 months
+scenario_3_results <- readRDS("scenario_3_results.rds") # Outdegree (med) >= 6 months
+scenario_4_results <- readRDS("scenario_4_results.rds") # Outdegree any month
+scenario_5_results <- readRDS("scenario_5_results.rds") # Betweenness (high) >= 6 months
+scenario_6_results <- readRDS("scenario_6_results.rds") # Betweenness (med) >= 4 months
+scenario_7_results <- readRDS("scenario_7_results.rds") # Betweenness any month
+scenario_8_results <- readRDS("scenario_8_results.rds") # Combined (high) BT >= 6 months & OD >= 8 months
+scenario_9_results <- readRDS("scenario_9_results.rds") # Combined (med) BT>= 4 months & 0D >= 6 months
+scenario_10_results <- readRDS("scenario_10_results.rds") # Combined any month
+scenario_11_results <- readRDS("scenario_11_results.rds") # control High - random 4 farms (average of scenarios 3/6/9) = 4.33 (4)
+scenario_12_results <- readRDS("scenario_12_results.rds") # control med - random 9 farms (average of scenarios 2/5/8) = 9.33 (9)
+scenario_13_results <- readRDS("scenario_13_results.rds") # random 40 farms (average of scenarios 4/7/10) = 40.33 (40)
+scenario_14_results <- readRDS("scenario_14_results.rds") # OD HIGH CONTROL (5 removed)
+scenario_15_results <- readRDS("scenario_15_results.rds") # OD MED CONTROL (8 removed)
+scenario_16_results <- readRDS("scenario_16_results.rds") # OD ALL CONTROL (43 removed)
+scenario_17_results <- readRDS("scenario_17_results.rds") # BT HIGH CONTROL (6 removed)
+scenario_18_results <- readRDS("scenario_18_results.rds") # BT MED CONTROL (14 removed)
+scenario_19_results <- readRDS("scenario_19_results.rds") # BT ALL CONTROL (47 removed)
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC1 <- bind_rows( 
+  lapply(scenario_1_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC1 <- bind_rows(
+  lapply(scenario_1_results, function(x) x$summary)
+)
+```
+
+```{r}
+# Put all scenario results into one list
+all_scenarios <- list(
+  SC1 = scenario_1_results,
+  SC2 = scenario_2_results,
+  SC3 = scenario_3_results,
+  SC4 = scenario_4_results,
+  SC5 = scenario_5_results,
+  SC6 = scenario_6_results,
+  SC7 = scenario_7_results,
+  SC8 = scenario_8_results,
+  SC9 = scenario_9_results,
+  SC10 = scenario_10_results,
+  SC11 = scenario_11_results,
+  SC12 = scenario_12_results,
+  SC13 = scenario_13_results,
+  SC14 = scenario_14_results,
+  SC15 = scenario_15_results,
+  SC16 = scenario_16_results,
+  SC17 = scenario_17_results,
+  SC18 = scenario_18_results,
+  SC19 = scenario_19_results
+)
+
+# Create empty lists to store outputs
+daily_results <- list()
+summary_results <- list()
+
+# Loop through scenarios
+for (scenario in names(all_scenarios)) {
+  
+  daily_results[[scenario]] <- bind_rows(
+    lapply(all_scenarios[[scenario]], function(x) x$daily)
+  )
+  
+  summary_results[[scenario]] <- bind_rows(
+    lapply(all_scenarios[[scenario]], function(x) x$summary)
+  )
+}
+
+# call individual with - summary_results$SC3 etc
+```
+
+Read in data from RQ1 for number farms removed
+```{r}
+# OUTDEGREE
+OD_all_candidates <- readRDS(
+  "outdegree_all_candidates.rds"
+)
+
+OD_med_candidates <- readRDS(
+  "outdegree_med_persistent.rds"
+)
+
+OD_high_candidates <- readRDS(
+  "outdegree_high_persistent.rds"
+)
+```
+
+```{r}
+head(OD_all_candidates)
+```
+
+```{r}
+# BETWEENNESS
+BT_all_candidates <- readRDS(
+  "BT_any_persistent.rds"
+)
+
+BT_high_candidates <- readRDS(
+  "BT_high_persistent.rds"
+)
+
+BT_med_candidates <- readRDS(
+  "BT_med_persistent.rds"
+)
+```
+
+```{r}
+# COMBINED BETWEENNESS & OUTDEGREE
+CB_all_candidates <- readRDS(
+  "Combined_all_persistent.rds"
+)
+
+CB_high_candidates <- readRDS(
+  "Combined_high_persistent.rds"
+)
+
+CB_med_candidates <- readRDS(
+  "Combined_med_persistent.rds"
+)
+```
+Core story:
+Do temporally persistent structurally important farms represent effective targets for reducing bTB-like disease spread through cattle movements?
+1.	Scenario description:
+	Scenario table – see below – intervention type, persistence threshold, number of farms removed, % of farms removed
+	
+2.	Network validation: largest connected component
+	Explains the mechanism – shows that farms removed were structurally important – which altered network connectivity & influenced transmission
+	Single metric – size of largest connected component before/after removal – simple figure – baseline network LCC & intervention LCCs
+3.	SOIR epidemic outcomes
+a)	Probability of an epidemic establishment – proportion of simulations producing sustained transmission – define threshold
+b)	Final outbreak size = how much disease occurs – median infected farms/IQR/% reduction relative to baseline – CARE here with median – report mean infected farms with uncertainty – SD AND distribution of final outbreak sizes to show stochastic nature of transmission – majority of infection seeds fade out and do not transmit. Could also add conditional outbreak size - 
+c)	Peak infectious farms = how intense in the outbreak
+d)	Show all results in one figure/table: probability of epidemic establishment; final outbreak size; peak infectious farms – interpret patterns
+
+Drop combined scenarios? – mention in discussion/next steps – but is answering a different question - ? are combined centrality measures better intervention targets than single centrality measures – if add then make it – do farms occupying multiple important network positions provide even better intervention targets?
+removing structurally important farms decreases the likelihood of epidemic establishment, limits outbreak size when transmission occurs, and decereases epidemic intensity
+
+# 1. Create scenario table - what was removed
+
+```{r}
+total_farms = 301
+scenario_table <- data.frame(
+  Scenario = c(
+    "(1)",
+    "(2)",
+    "(3)",
+    "(4)",
+    "(5)",
+    "(6)",
+    "(7)",
+    "(8)",
+    "(9)",
+    "(10)",
+    "(11)",
+    "(12)",
+    "(13)",
+    "(14)",
+    "(15)",
+    "(16)",
+    "(17)",
+    "(18)",
+    "(19)"
+  ),
+  
+  Type = c(
+    "Baseline",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Random removal control",
+    "Random removal control",
+    "Random removal control",
+    "CONTROL OD HIGH",
+    "CONTROL OD MED",
+    "CONTROL OD ALL",
+    "CONTROL BT HIGH",
+    "CONTROL BT MED",
+    "CONTROL BT ALL"
+  ),
+  
+  Centrality = c(
+    "None",
+    "Out-degree",
+    "Out-degree",
+    "Out-degree",
+    "Betweenness",
+    "Betweenness",
+    "Betweenness",
+    "Combined",
+    "Combined",
+    "Combined",
+    "Random",
+    "Random",
+    "Random",
+    "RandomOD",
+    "RandomOD",
+    "RandomOD",
+    "RandomBT",
+    "RandomBT",
+    "RandomBT"
+  ),
+  
+  Persistence = c(
+    "None",
+    "High >=8 months",
+    "Medium >=6 months",
+    ">=1 month",
+    "High >=6 months",
+    "Medium >=4 months",
+    ">= 1 month",
+    "High BT >=6 AND OD >=8 months",
+    "Medium BT >=4 AND OD>=6 months",
+    ">=1 month",
+    "Matched to 'high' candidates",
+    "Matched to 'medium' candidates",
+    "Matched to 'all' candidates",
+    "Matched to OD HIGH",
+    "Matched to OD MED",
+    "Matched to OD ALL",
+    "Matched to BT HIGH",
+    "Matched to BT MED",
+    "Matched to BT ALL"
+  ),
+  Number_of_farms_removed = c(
+    0,
+    length(OD_high_candidates),
+    length(OD_med_candidates),
+    length(OD_all_candidates),
+    length(BT_high_candidates),
+    length(BT_med_candidates),
+    length(BT_all_candidates),
+    length(CB_high_candidates),
+    length(CB_med_candidates),
+    length(CB_all_candidates),
+    4,
+    9,
+    40,
+    5,
+    8,
+    43,
+    6,
+    14,
+    47
+  ),
+  
+  Percent_of_all_farms = c(
+    0,
+    length(OD_high_candidates)/total_farms*100,
+    length(OD_med_candidates)/total_farms*100,
+    length(OD_all_candidates)/total_farms*100,
+    length(BT_high_candidates)/total_farms*100,
+    length(BT_med_candidates)/total_farms*100,
+    length(BT_all_candidates)/total_farms*100,
+    length(CB_high_candidates)/total_farms*100,
+    length(CB_med_candidates)/total_farms*100,
+    length(CB_all_candidates)/total_farms*100,
+    4/total_farms*100,
+    9/total_farms*100,
+    40/total_farms*100,
+    5/total_farms*100,
+    8/total_farms*100,
+    43/total_farms*100,
+    6/total_farms*100,
+    14/total_farms*100,
+    47/total_farms*100
+  )
+)
+
+scenario_table
+```
+# 2. show change in largest connected component - GWCC - show removal of potential transmission pathways (undirected) - did removal change the movement network
+Table and figure (x-axis: scenario; y_axis: GWCC size (% of farms)) - bars/points
+
+  does betweeness removal fragment network more? does outdegree removal have less effect on connectivity; does combined have the largest effect?
+
+Need to construct a whole year aggregated movement network, then apply each removal intervention to that network and calculate GWCC after removal
+
+```{r}
+# modify graph/network code from RQ1.Rmd
+create_movement_network <- function(df) {
+
+  # Convert IDs
+  df$org_id  <- as.character(df$org_id)
+  df$dest_id <- as.character(df$dest_id)
+
+  # Node table
+  org_nodes <- df[, c("org_id", "org_type")]
+  colnames(org_nodes) <- c("name", "type")
+
+  dest_nodes <- df[, c("dest_id", "dest_type")]
+  colnames(dest_nodes) <- c("name", "type")
+
+  nodes <- unique(rbind(org_nodes, dest_nodes))
+
+  # Edge list
+  edges <- df[, c("org_id", "dest_id")]
+
+  # Create directed network
+  g <- graph_from_data_frame(
+    d = edges,
+    vertices = nodes,
+    directed = TRUE
+  )
+
+  # Add weights
+  E(g)$weight <- df$total_cattle
+
+  return(g)
+}
+```
+
+```{r}
+# import data
+annual_movement <- read.csv("RQ1 NO EP.csv")
+head(annual_movement)
+```
+
+
+
+```{r}
+# create as graph network by calling function
+annual_network = create_movement_network(annual_movement)
+```
+```{r}
+vcount(annual_network)
+
+V(annual_network)$name
+```
+
+```{r}
+# calculate basline GWCC
+baseline_gwcc <- max(components(annual_network, mode = "weak")$csize) # csize = extract number of farms in each connected component
+baseline_gwcc
+```
+```{r}
+# create random removal controls
+# removal-size controls representing the typical number of farms removed across each persistence category
+
+Control_high_random <- sample(
+  V(annual_network)$name,
+  size = 4,
+  replace = FALSE
+)
+
+Control_medium_random <- sample(
+  V(annual_network)$name,
+  size = 9,
+  replace = FALSE
+)
+
+Control_all_random <- sample(
+  V(annual_network)$name,
+  size = 40,
+  replace = FALSE
+)
+# ADD HERE IF WANT TO PUT CONTROLS PER SCENARIO RATHER THAN AVERAGES
+```
+```{r}
+# remove farms for each scenario
+network_removed_ODhigh <- delete_vertices(
+  annual_network,
+  OD_high_candidates
+)
+```
+```{r}
+# calculate GWCC
+GWCC_removed_ODhigh <- max(components(network_removed_ODhigh, mode = "weak")$csize)
+GWCC_removed_ODhigh
+```
+```{r}
+test <- components(network_removed_ODhigh, mode = "weak")$no
+test
+```
+```{r}
+# create loop to speed up
+removal_scenarios <- list(
+  S2 = OD_high_candidates,
+  S3 = OD_med_candidates,
+  S4 = OD_all_candidates,
+  S5 = BT_high_candidates,
+  S6 = BT_med_candidates,
+  S7 = BT_all_candidates,
+  S8 = CB_high_candidates,
+  S9 = CB_med_candidates,
+  S10 = CB_all_candidates,
+  S11 = Control_high_random,
+  S12 = Control_medium_random,
+  S13 = Control_all_random,
+  Annual_Bt_FIVE = annual_BT_top5,
+  Annual_OD_FIVE = annual_OD_top5,
+  Annual_OD_deg = annual_OD_top5_deg
+  #SC14 = 
+  #SC15 = 
+  #SC16 = 
+  #SC17 = 
+  #SC18 = 
+  #SC19 = 
+)
+
+```
+```{r}
+gwcc_results <- data.frame(
+  Scenario = character(),
+  Farms_removed = numeric(),
+  GWCC_size = numeric(),
+  GWCC_percentage_remaining = numeric(),
+  Number_components = numeric()
+)
+
+#total_farms_nw = vcount(annual_network)
+
+for (s in names(removal_scenarios)) {
+  
+  removed_network <- delete_vertices(
+    annual_network,
+    removal_scenarios[[s]]
+  )
+  
+  comp <- components(removed_network, mode = "weak")
+  
+  farms_remaining <- vcount(removed_network)
+  
+  gwcc_size <-max(comp$csize)
+  
+  gwcc_percent <- (gwcc_size / farms_remaining) * 100
+  
+  gwcc_results <- rbind(
+    gwcc_results,
+    data.frame(
+      Scenario = s,
+      Farms_removed = length(removal_scenarios[[s]]),
+      GWCC_size = gwcc_size,
+      GWCC_percentage_remaining = gwcc_percent,
+      Number_components = comp$no
+    )
+  )
+}
+```
+```{r}
+# calculate baseline network components
+baseline_comp <- components(annual_network, mode = "weak")
+
+#baseline_gwcc <- max(baseline_comp$csize)
+
+#baseline_percent <- (baseline_gwcc / vcount(annual_network)) * 100
+
+#baseline_components <- baseline_comp$no
+
+# add baseline GWCC
+gwcc_results <- rbind(
+  data.frame(
+    Scenario = "S1",
+    Farms_removed = 0,
+    GWCC_size = max(baseline_comp$csize),
+    GWCC_percentage_remaining = (max(baseline_comp$csize) / vcount(annual_network))*100,
+    Number_components = baseline_comp$no
+  ),
+  
+  gwcc_results
+)
+```
+```{r}
+gwcc_results
+```
+```{r}
+# REMOVE RESULTS
+rm(gwcc_results)
+```
+```{r}
+sum(annual_OD_top5 %in% V(annual_network)$name)
+```
+```{r}
+length(annual_OD_top5)
+length(intersect(annual_OD_top5, V(annual_network)$name))
+```
+
+Sc7 resulted in the greatest fragmentation of the annual movement network, reducing the GWCC to 193 farms and increasing the number of weakly connected compnents to 62. This suggests the farms targeted in this scenario occupied structurally important positions that maintained connectivity between groups
+
+AND
+
+Removal of farms that appeared in the top 5% of centrality measures for at least one month produced the greatest disruption to the network connectivity, with the strongest effect observed for betweeness-based removal, Persistent high-centrality farms identified over longer time period did not substantially fragment the annual network.
+
+AND control result - supports interpretation that fragmentation is not simply because "many farms were removed"; it is because the removed farms occupied structurally important positions
+
+AND - most interventions did not fragment the network. Fragmentation occurred only when all persistent betweenness/outdegree (and if applicable, combined) farms were removed. Random removal and annual top 5% removal did not produce comparable fragmentation.
+
+So network fragmentation was limited under persistent-node removal scenarios, with the exception of removal of farms identified as high betweeness nodes at the lowest persistence threshold. Suggests that short-term emergence of structurally important bridging farms may have greater influence on annual network connectivity than farms consistently ranked as central over long periods
+
+COMPARE TOP BETWEENNESS/OD WITH TEMPORAL AND ANNUAL STATIC NETWORKS
+```{r}
+# annual betweenness
+annual_BT <- betweenness(
+  annual_network,
+  directed = TRUE,
+  weights = E(annual_network)$weight
+)
+
+# top 5% annual farms
+annual_BT_top5 <- names(
+  sort(annual_BT, decreasing = TRUE)
+)[1:ceiling(length(annual_BT)*0.05)]
+```
+```{r}
+length(annual_BT_top5)
+annual_BT_top5
+```
+```{r}
+length(BT_all_candidates)
+BT_all_candidates
+```
+```{r}
+overlap_BT <- length(intersect(BT_all_candidates, annual_BT_top5)) / length(BT_all_candidates) * 100
+overlap_BT
+```
+```{r}
+annual_OD <- strength( # reflect cattle movement volume
+  annual_network,
+  mode = "out",
+  weights = E(annual_network)$weight
+)
+```
+```{r}
+annual_OD_top5 <- names(
+  sort(annual_OD, decreasing = TRUE)
+)[1:ceiling(length(annual_OD) * 0.05)]
+```
+```{r}
+length(annual_OD_top5)
+annual_OD_top5
+```
+```{r}
+annual_OD_deg <- degree( # if unweighted degree changes things
+  annual_network,
+  mode = "out"
+)
+```
+```{r}
+annual_OD_top5_deg <- names(
+  sort(annual_OD_deg, decreasing = TRUE)
+)[1:ceiling(length(annual_OD_deg)*0.05)]
+```
+
+All farms identified in the annual top 5% for betweenness centrality were also identified by the temporal persistence approach. Possible some of the observed reduction in network connectivity may reflect removal of farms that would also have been identified using a static annual network. The temporal approach identified an additional 31 farms exhibiting repeated monthly structural importance, although the independent contribution of these additional farms was not evaluated
+```{r}
+total_farms = 301
+GWCC_table <- data.frame(
+  Scenario = c(
+    "(1)",
+    "(2)",
+    "(3)",
+    "(4)",
+    "(5)",
+    "(6)",
+    "(7)",
+    "(8)",
+    "(9)",
+    "(10)",
+    "(11)",
+    "(12)",
+    "(13)"
+  ),
+  
+  Farms_removed = c(
+    0,
+    length(OD_high_candidates),
+    length(OD_med_candidates),
+    length(OD_all_candidates),
+    length(BT_high_candidates),
+    length(BT_med_candidates),
+    length(BT_all_candidates),
+    length(CB_high_candidates),
+    length(CB_med_candidates),
+    length(CB_all_candidates),
+    4,
+    9,
+    40
+  ),
+  
+  GWCC_size_farms = c(
+    total_farms - 0,
+    total_farms - length(OD_high_candidates),
+    total_farms - length(OD_med_candidates),
+    total_farms - length(OD_all_candidates),
+    total_farms - length(BT_high_candidates),
+    total_farms - length(BT_med_candidates),
+    total_farms - length(BT_all_candidates),
+    total_farms - length(CB_high_candidates),
+    total_farms - length(CB_med_candidates),
+    total_farms - length(CB_all_candidates),
+    total_farms - 4,
+    total_farms - 9,
+    total_farms - 40
+  ),
+  
+  GWCC_percentage_of_remaining_farms = c(# what are you calculating the percentage relative to?
+    100,
+    
+    
+  )
+)
+
+```
+# 3. SOIR simulations - did the network changes alter disease spread
+
+(a) probability of epidemic establishment - threshold = proportion of simulations --> sustained transmission
+Does the intervention prevent epidemics from becoming established?
+
+
+Report:
+  number/proportion of simulations exceeding the threshold
+  relatove reduction compared to baseline
+  
+Aim - capture the likelihood of sustained transmission
+
+Define threshold - limited in literature - plot distribution of final outbreak sizes across all 2000 sims in baseline - see if natural cluster of larger outbreaks
+
+```{r}
+# plot distribution of final outbreak sizes across all 2000 sims in baseline
+
+# name of column containing final outbreak size
+names(summary_results_SC1)
+
+```
+```{r}
+summary(summary_results_SC1$final_infected)
+```
+```{r}
+# plot the distribution
+
+ggplot(summary_results_SC1, aes(x = final_infected)) +
+  geom_histogram(
+    binwidth = 1,
+    colour = "black",
+    fill = "steelblue"
+  ) +
+  labs(
+    x = "Final outbreak size (infected farms)",
+    y = "Number of simulations",
+    title = "Distribution of final outbreak sizes"
+  ) +
+  theme_classic()
+```
+```{r}
+# zoom in on lower end
+ggplot(summary_results_SC1, aes(x = final_infected)) +
+  geom_histogram(
+    binwidth = 1,
+    colour = "black",
+    fill = "steelblue"
+  ) +
+  coord_cartesian(xlim = c(1, 30)) +
+  labs(
+    x = "Final outbreak size (infected farms)",
+    y = "Number of simulations"
+  ) +
+  theme_classic()
+```
+```{r}
+
+outbreak_dist <- summary_results_SC1 %>%
+  count(final_infected)
+```
+```{r}
+ggplot(outbreak_dist, aes(x = final_infected, y = n)) +
+  geom_area(fill = "steelblue", alpha = 0.6) +
+  geom_line(colour = "steelblue4", linewidth = 1) +
+  labs(
+    x = "Final outbreak size (infected farms)",
+    y = "Number of simulations"
+  ) +
+  theme_classic()
+```
+```{r}
+# frequency table - shows exact numbers
+table(summary_results_SC1$final_infected)
+```
+```{r}
+as.data.frame(table(summary_results_SC1$final_infected))
+```
+```{r}
+table(summary_results_SC1$final_infected)[1:20]
+```
+```{r}
+summary_results_SC1 %>%
+  count(final_infected)
+```
+No obvious break/peak to justify threshold - pick biologically representative threshold and then use sensitivity analysis across baseline/BT/OD to show preservation of ranking
+
+
+```{r}
+# threshold 1: final infected >5
+mean(summary_results_SC1$final_infected >=5)
+
+# 16% of infections results in epidemics involving 5+ farms
+```
+```{r}
+# threshold 2: final infected >10
+mean(summary_results_SC1$final_infected >= 10)
+
+# 7% of infections results in epidemics involvinf 10+ farms - 140 outbreaks in 2000 sims
+```
+```{r}
+# threshold 3: final infected >= 20
+mean(summary_results_SC1$final_infected >=20)
+
+# 3% of infections resulted in epidemics involving 20+ farms
+```
+Threshold >10 - reasonable middle threshold? capture substantial spread event while still leaving enough established outbreaks to compare final outbreak size and peak infectiousness? use sensitivity analysis ranking to check/support robustness
+
+SENSITIVITY ANALYSIS OF THRESHOLD >= 10
+
+Range of thresholds = 5, 10, 15, 20 infected farms
+For each intervention scenario, calculate proportion of sims that exceed each threshold (out of the initial 2000 sims)
+Check to see the ranking remains the same at every threshold - conclude that findings are robust to the choice of the threshold
+
+```{r}
+summary_results_SC1 <- summary_results$SC1
+summary_results_SC2 <- summary_results$SC2
+summary_results_SC3 <- summary_results$SC3
+summary_results_SC4 <- summary_results$SC4
+summary_results_SC5 <- summary_results$SC5
+summary_results_SC6 <- summary_results$SC6
+summary_results_SC7 <- summary_results$SC7
+summary_results_SC8 <- summary_results$SC8
+summary_results_SC9 <- summary_results$SC9
+summary_results_SC10 <- summary_results$SC10
+summary_results_SC11 <- summary_results$SC11
+summary_results_SC12 <- summary_results$SC12
+summary_results_SC13 <- summary_results$SC13
+summary_results_SC14 <- summary_results$SC14
+summary_results_SC15 <- summary_results$SC15
+summary_results_SC16 <- summary_results$SC16
+summary_results_SC17 <- summary_results$SC17
+summary_results_SC18 <- summary_results$SC18
+summary_results_SC19 <- summary_results$SC19
+```
+
+```{r}
+# create list of final outbreak sizes
+outbreak_sizes <- list(
+  Baseline = summary_results_SC1$final_infected,
+  Outdegree_high = summary_results_SC2$final_infected,
+  Out_degree_med = summary_results_SC3$final_infected,
+  Outdegree_all = summary_results_SC4$final_infected,
+  Betweenness_high = summary_results_SC5$final_infected,
+  Betweenness_med =summary_results_SC6$final_infected,
+  Betweenness_all = summary_results_SC7$final_infected
+)
+
+```
+```{r}
+str(outbreak_sizes)
+```
+    YOU ARE HERE 06/08/26
+
+```{r}
+thresholds = c(5, 10, 15, 20)
+
+threshold_results <- data.frame(
+  scenario = character(),
+  threshold = numeric(),
+  proportion = numeric(),
+  stringsAsFactors = FALSE
+  )
+
+
+for (s in names(outbreak_sizes)) {
+  
+  outbreaks <- outbreak_sizes[[s]]
+  
+  for (t in thresholds) {
+    threshold_results <- rbind(
+      threshold_results,
+      data.frame(
+        Scenario = s,
+        Threshold = t,
+        proportion = mean(outbreaks >= t) #* 100
+      )
+    )
+  }
+}
+```
+```{r}
+threshold_results
+```
+
+```{r}
+# plot sensitivity analysis
+
+ggplot(threshold_results,
+       aes(x = Threshold,
+           y = proportion,
+           colour = Scenario)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Threshold (infected farms)",
+    y = "Probability of a major outbreak",
+    colour = "Scenario"
+  ) +
+  theme_bw()
+```
+
+
+```{r}
+thresholds2 <- c(1, 2, 3, 5, 7, 10, 15, 20)
+
+threshold_results2 <- data.frame(
+  scenario = character(),
+  threshold = numeric(),
+  proportion = numeric(),
+  stringsAsFactors = FALSE
+  )
+
+
+for (s in names(outbreak_sizes)) {
+  
+  outbreaks <- outbreak_sizes[[s]]
+  
+  for (t in thresholds2) {
+    threshold_results2 <- rbind(
+      threshold_results2,
+      data.frame(
+        Scenario2 = s,
+        Threshold2 = t,
+        proportion2 = mean(outbreaks >= t) #* 100
+      )
+    )
+  }
+}
+```
+
+```{r}
+threshold_results2
+```
+
+```{r}
+# plot sensitivity analysis
+
+ggplot(threshold_results2,
+       aes(x = Threshold2,
+           y = proportion2,
+           colour = Scenario2)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Threshold (infected farms)",
+    y = "Probability of a major outbreak",
+    colour = "Scenario"
+  ) +
+  theme_bw()
+```
+
+Threshold of >= 10 infected farms operationally defines a major outbreak.
+No natural separation between minor and major outbreaks is evident from the outbreak-size distribution (baseline), sensitivity analysis performed across thresholds of 1-20 infected farms was done to evaluate whether intervention rankings were dependent on this definition. CARE at one point betweenness and outdegree swap in the ranking, but the ranking of baseline vs intervention is consistent
+
+
+Report:
+  number/proportion of simulations exceeding the threshold per intervention
+  relatove reduction compared to baseline
+  
+Aim - capture the likelihood of sustained transmission
+
+```{r}
+# list of scenarios to include - dropped combined - see prev
+sustained_trans <- list(
+  baseline = summary_results_SC1$final_infected, 
+  OD_high = summary_results_SC2$final_infected,
+  OD_med = summary_results_SC3$final_infected, 
+  OD_all = summary_results_SC4$final_infected, 
+  BT_high = summary_results_SC5$final_infected, 
+  BT_med = summary_results_SC6$final_infected, 
+  BT_all = summary_results_SC7$final_infected, 
+  #CT_high = summary_results_SC11 
+  #CT_med = summary_results_SC12 
+  #CT_ALL = summary_results_SC13 
+  CT_OD_HIGH = summary_results_SC14$final_infected,
+  CT_OD_MED = summary_results_SC15$final_infected,
+  CT_OD_ALL = summary_results_SC16$final_infected,
+  CT_BT_HIGH = summary_results_SC17$final_infected,
+  CT_BT_MED = summary_results_SC18$final_infected,
+  CT_BT_ALL = summary_results_SC19$final_infected
+)
+```
+```{r}
+threshold_final <- 10
+
+threshold_counts_final <- data.frame(
+  Scenario_final = names(sustained_trans),
+  Exceeding = sapply(sustained_trans, function(x) sum(x >= threshold_final)),
+  Total = sapply(sustained_trans, length)
+)
+
+threshold_counts_final$Proportion_final <- threshold_counts_final$Exceeding / threshold_counts_final$Total
+
+# extract baseline probability
+baseline_prob <- threshold_counts_final$Proportion_final[threshold_counts_final$Scenario_final == "baseline"]
+
+# calculate relatve reduction compared with baseline
+threshold_counts_final$Relative_reduction <- (
+  (baseline_prob - threshold_counts_final$Proportion_final) / baseline_prob
+)
+
+threshold_counts_final
+```
+
+```{r}
+# clear output
+rm(threshold_counts_final)
+```
+
+Exceeding is the total number of sims that exceed the threshold (resulted in a sustained outbreak); total = total number of sims; proportion_final = proportion of sims that exceeded threshold (probability of a sustained outbreak)
+
+Results show - OD removal slightly more effective than BT removal at high & med intervention levels, but both converge when all high-ranking farms are removed.
+
+e.g. at the infected farm threshold >=10, 141/2000 baseliine simulations (7.1%) resulted in sustained outbreaks, compared with X/2000 (x%) following high out-degree removal - stochastic!
+
+REPORT:
+1. number/proportion of simulations exceeding the sustained outbreak threshold
+2. relative reduction compared with baseline
+
+Include control - helps to separate - effect of removing farms in general (control); effect of removing structurally important farms (OD/BT) - allows to state - targeted removal reduces outbreaks beyond what would be expected from removing a similar number of farms randomly
+
+Figure 1 - probability of sustained outbreak (number of sims exceeding the sustained outbreak) - grouped by intervention type, with separate bars for high/med/all
+
+  y-axis = prob of sustained outbreak (proportion_final)
+  x-axis = intervention scenario
+  bars grouped by - baseline/control/OD rmeoval/BT removal
+  +/- separate by intervention intensity (high/med/all)
+
+```{r, fig.width=12, fig.height=6}  
+ggplot(threshold_counts_final,
+       aes(x = Scenario_final,
+           y = Proportion_final,
+           fill = Scenario_final)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+     x = "Scenario",
+     y = "Probability of sustained outbreak (>=10 threshold)"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+Figure 2 - relative reduction compared with baseline = effectiveness of each intervention relative to no intervention
+
+  relative reduction = p(baseline) - p(scenario)/p(baseline)
+  y-axis = relative reduction (%)
+  x-axis = scenario
+  same grouping as figure 1
+
+```{r, fig.width=12, fig.height=6}
+ggplot(threshold_counts_final,
+       aes(x = Scenario_final,
+           y = Relative_reduction,
+           fill = Scenario_final)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+     x = "Scenario",
+     y = "Relative outbreak reduction vs baseline"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+# AI - how can i group this plot by intensity windows, maintaining controls
+# group by intensity and intervention type
+
+threshold_counts_final$Intensity <- NA
+threshold_counts_final$Method <- NA
+
+# Assign intervention intensity
+threshold_counts_final$Intensity[grepl("HIGH", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "High"
+threshold_counts_final$Intensity[grepl("MED", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "Medium"
+threshold_counts_final$Intensity[grepl("ALL", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "All"
+
+threshold_counts_final$Intensity[threshold_counts_final$Scenario_final == "baseline"] <- "Baseline"
+
+
+# Assign intervention method
+threshold_counts_final$Method[grepl("^OD", threshold_counts_final$Scenario_final)] <- "Out-degree"
+threshold_counts_final$Method[grepl("^BT", threshold_counts_final$Scenario_final)] <- "Betweenness"
+
+# Keep matched controls separate
+threshold_counts_final$Method[grepl("CT_OD", threshold_counts_final$Scenario_final)] <- "Control (OD matched)"
+threshold_counts_final$Method[grepl("CT_BT", threshold_counts_final$Scenario_final)] <- "Control (BT matched)"
+
+# Baseline
+threshold_counts_final$Method[threshold_counts_final$Scenario_final == "baseline"] <- "Baseline"
+
+
+# Set plotting order
+threshold_counts_final$Intensity <- factor(
+  threshold_counts_final$Intensity,
+  levels = c("High", "Medium", "All", "Baseline")
+)
+
+threshold_counts_final$Method <- factor(
+  threshold_counts_final$Method,
+  levels = c(
+    "Control (OD matched)",
+    "Out-degree",
+    "Control (BT matched)",
+    "Betweenness",
+    "Baseline"
+  )
+)
+```
+
+```{r}
+# Duplicate baseline into each intensity panel
+
+baseline_row <- threshold_counts_final[
+  threshold_counts_final$Scenario_final == "baseline",
+]
+
+baseline_repeated <- baseline_row[rep(1, 3), ]
+
+baseline_repeated$Intensity <- c("High", "Medium", "All")
+baseline_repeated$Method <- "Baseline"
+
+# Remove original baseline and add repeated baseline
+plot_data <- rbind(
+  threshold_counts_final[
+    threshold_counts_final$Scenario_final != "baseline",
+  ],
+  baseline_repeated
+)
+
+# Set order of panels
+plot_data$Intensity <- factor(
+  plot_data$Intensity,
+  levels = c("High", "Medium", "All")
+)
+
+# Set order of bars
+plot_data$Method <- factor(
+  plot_data$Method,
+  levels = c(
+    "Baseline",
+    "Control (OD matched)",
+    "Out-degree",
+    "Control (BT matched)",
+    "Betweenness"
+  )
+)
+```
+```{r, fig.width = 12, fig.height = 4}
+# plot probability of sustained outbreak by intensity
+
+# order of windows
+threshold_counts_final$Intensity <- factor(
+  threshold_counts_final$Intensity,
+  levels = c("Baseline", "High", "Medium", "All")
+)
+ggplot(
+  plot_data,
+  aes(x = Method,
+      y = Proportion_final,
+      fill = Method)
+) +
+  geom_col(position = "dodge") +
+  facet_wrap(~Intensity) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Intervention strategy",
+    y = "Probability of sustained outbreak (≥10 infected farms)"
+  ) +
+  theme_bw()
+```
+
+```{r}
+# Duplicate baseline into each intensity panel for relative reduction plot
+
+baseline_reduction <- threshold_counts_final[
+  threshold_counts_final$Scenario_final == "baseline",
+]
+
+baseline_reduction <- baseline_reduction[rep(1, 3), ]
+
+baseline_reduction$Intensity <- c("High", "Medium", "All")
+baseline_reduction$Method <- "Baseline"
+baseline_reduction$Relative_reduction <- 0
+
+
+# Remove original baseline and add repeated baseline
+plot_reduction <- rbind(
+  threshold_counts_final[
+    threshold_counts_final$Scenario_final != "baseline",
+  ],
+  baseline_reduction
+)
+
+
+# Set panel order
+plot_reduction$Intensity <- factor(
+  plot_reduction$Intensity,
+  levels = c("High", "Medium", "All")
+)
+
+
+# Set bar order
+plot_reduction$Method <- factor(
+  plot_reduction$Method,
+  levels = c(
+    "Baseline",
+    "Control (OD matched)",
+    "Out-degree",
+    "Control (BT matched)",
+    "Betweenness"
+  )
+)
+```
+```{r, fig.width=12, fig.height=4}
+# plot relative reduction by intensity
+
+# order of windows
+#threshold_counts_final$Intensity <- factor(
+  #threshold_counts_final$Intensity,
+  #levels = c("High", "Medium", "All")
+#)
+
+ggplot(
+  plot_reduction,
+  aes(x = Method,
+      y = Relative_reduction,
+      fill = Method)
+) +
+  geom_col(position = "dodge") +
+  facet_wrap(~Intensity) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Intervention strategy",
+    y = "Relative outbreak reduction vs baseline"
+  ) +
+  theme_bw()
+```
+NOTE baseline not visible bar because baseline relative outbreak reduction vs baseline = zero! - remove basleine bar?
+
+# YOU ARE HERE 06/06/26
+
+Also NOTE - difference in controll BT vs BT and control OD and OD in 'high' - reflective or incidently removed structurally important farms in random control? Set.seed was used so same 5 farms removed for all 2000 sims - before rerunning many control sims - for each control set calculare mean OD/BT to see if accidently removed high-betweenness farms; re-run with changed seed and compare- sensitivity analysis to see if true result or random chance that structurally important cfarm was picked in control?
+```{r}
+table(plot_reduction$Intensity, plot_reduction$Method)
+```
+LOOK INTO lack of difference between BT control & intevention for 'HIGH'- true or coding anomaly?
+!!!!For stats:!!!!
+Factor 1: intervention type - baseline/OD/BT/CT - does intervention type matter?
+Factor 2: intervention intensity - high/med/all- does intensity matter?
+
+OR simplify - keep all intensities (baseline/high/med/all) and compare OD & BT within each intensity
+
+# YOU ARE HERE 07/08/26
+
+(b) final outbreak size --> how much dz occurs - use conditional on sustained transmission but show comparison with total/reference above question to show basis.
+
+conditional on a sustained outbreak occuring, how severe is it?
+
+if an epidemic becomes established (threshold >= 10), how large does it become/how many farms are infected?
+
+the next result i want to generate is final outbreak size - if an epidemic becomes established (>=10), how large does it become/how many farms are infected? compare interventions to basline/control
+
+Restrict analysis to successful epidemics (meet the establishment threshold >=10)
+
+Report - Median, IQR, % reduction relative to baseline
+
+Avoid the problem where median is always 1 because most introducitons die out
+
+(c) peak infectious farms - how intense is outbreak IF THERE IS AN OUTBREAK - explain as above - mean/median peak without <1 sims
+
+If an epidemic occurs, how intense is it?
+
+Only analyse successful epidemics
+
+Report - median peak infectious farms; IQR; % redution relative to baseline
+
+Aim - measure the epidemic burden on the system; independent of whether an epidemic occured in the first place or not
+
+# ANALYSIS
+Look at anova that is non-parametric - compare BT/OD/baseline and will highlight is there is a significant difference between them - then there is another test that can help find the difference if there is one. NOT using high/med/all - incoporate this?
+
+Suggestion from google:
+  Report median & OQR for each scenario
+  Use Kruskal-Wallis test to assess whether there is an     overall difference among scenarios
+ If significant - perform pairwise Wilcoxon test (or Dunns test) comparing each intervention to the baseline, with multiple-testing correction
+ 
+FIRST - check for distribution - normal/not? CARE to remember and explain if have removed <1 sims and what the distribution is

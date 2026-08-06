@@ -1097,6 +1097,128 @@ class(scenario_13)
 dim(scenario_13) # - number of rows (movements)
 length(unique(c(scenario_13$source, scenario_13$destination))) # number of nodes
 ```
+ADD CONTROLS FOR EACH SCENARIO EXCEPT COMBINED - NOT USIGN
+
+```{r}
+# Control OD High 
+# Scenario 14 - random removal of 5 farms = control HIGH
+
+set.seed(14) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_5 <- sample(all_farms, 5)
+
+scenario_14 <- movements %>%
+  filter(
+    !(source %in% random_5),
+    !(destination %in% random_5)
+  )
+```
+```{r}
+# check worked & df
+any(random_5 %in% scenario_14$source)
+any(random_5 %in% scenario_14$destination)
+class(scenario_14)
+```
+```{r}
+# Control OD MED 
+# Scenario 15 - random removal of 8 farms = control MED
+
+set.seed(15) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_8 <- sample(all_farms, 8)
+
+scenario_15 <- movements %>%
+  filter(
+    !(source %in% random_8),
+    !(destination %in% random_8)
+  )
+```
+```{r}
+# check worked & df
+any(random_8 %in% scenario_15$source)
+any(random_8 %in% scenario_15$destination)
+class(scenario_15)
+```
+```{r}
+# Control OD ALL 
+# Scenario 16 - random removal of 43 farms = control all
+
+set.seed(16) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_43 <- sample(all_farms, 43)
+
+scenario_16 <- movements %>%
+  filter(
+    !(source %in% random_43),
+    !(destination %in% random_43)
+  )
+```
+```{r}
+# check worked & df
+any(random_43 %in% scenario_16$source)
+any(random_43 %in% scenario_16$destination)
+class(scenario_16)
+```
+```{r}
+# Control BT HIGH 
+# Scenario 17 - random removal of 6 farms = control HIGH
+
+set.seed(17) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_6 <- sample(all_farms, 6)
+
+scenario_17 <- movements %>%
+  filter(
+    !(source %in% random_6),
+    !(destination %in% random_6)
+  )
+```
+```{r}
+# check worked & df
+any(random_6 %in% scenario_17$source)
+any(random_6 %in% scenario_17$destination)
+class(scenario_17)
+```
+```{r}
+# Control BT MED 
+# Scenario 18 - random removal of 14 farms = control MED
+
+set.seed(18) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_14 <- sample(all_farms, 14)
+
+scenario_18 <- movements %>%
+  filter(
+    !(source %in% random_14),
+    !(destination %in% random_14)
+  )
+```
+```{r}
+# check worked & df
+any(random_14 %in% scenario_18$source)
+any(random_14 %in% scenario_18$destination)
+class(scenario_18)
+```
+```{r}
+# Control BT ALL 
+# Scenario 19 - random removal of 47 farms = control all
+
+set.seed(19) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_47 <- sample(all_farms, 47)
+
+scenario_19 <- movements %>%
+  filter(
+    !(source %in% random_47),
+    !(destination %in% random_47)
+  )
+```
+```{r}
+# check worked & df
+any(random_47 %in% scenario_19$source)
+any(random_47 %in% scenario_19$destination)
+class(scenario_19)
+```
 
 ```{r}
 # look-up table documenting which scenario each number represents
@@ -1653,6 +1775,113 @@ scenario_13_results <- pblapply(
 
 saveRDS(scenario_13_results, "scenario_13_results.rds")
 ```
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_14_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_14,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - OD HIGH CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_14_results, "scenario_14_results.rds")
+```
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_15_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_15,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - OD MED CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_15_results, "scenario_15_results.rds")
+```
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_16_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_16,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - OD ALL CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_16_results, "scenario_16_results.rds")
+```
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_17_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_17,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - BT HIGH CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_17_results, "scenario_17_results.rds")
+```
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_18_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_18,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - BT MED CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_18_results, "scenario_18_results.rds")
+```
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_19_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_19,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - BT ALL CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_19_results, "scenario_19_results.rds")
+```
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_19_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_19,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_19_results, "scenario_19_results.rds")
+```
+
+
 ```{r}
 # combine the daily outputs from all 2000 sim replicates into one data frame
 
