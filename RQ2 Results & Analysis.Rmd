@@ -919,6 +919,7 @@ sustained_trans <- list(
 )
 ```
 ```{r}
+# counts how many simulations exceeded the threshold & calculates number sustained outbreaks; proportion sustained outbreaks; relative reduction vs baseline
 threshold_final <- 10
 
 threshold_counts_final <- data.frame(
@@ -1004,34 +1005,45 @@ ggplot(threshold_counts_final,
 # AI - how can i group this plot by intensity windows, maintaining controls
 # group by intensity and intervention type
 
+# grepl() - searches for a pattern in scenario name e.g. "High"
+# factor(..., levels = ...) - tells ggplot the order to display categories instead of using alphabetical order
+
+# create two empty columns to store grouping information for plotting
 threshold_counts_final$Intensity <- NA
 threshold_counts_final$Method <- NA
 
-# Assign intervention intensity
-threshold_counts_final$Intensity[grepl("HIGH", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "High"
+  # assign intervention intensity
+
+# search scenario names (grepl) & assign each one to an intervention intensity label
+threshold_counts_final$Intensity[grepl("HIGH", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "High" # looks for high in every scenario name & assigns method
 threshold_counts_final$Intensity[grepl("MED", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "Medium"
 threshold_counts_final$Intensity[grepl("ALL", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "All"
 
+# assign the baseline scenario its own intensity label
 threshold_counts_final$Intensity[threshold_counts_final$Scenario_final == "baseline"] <- "Baseline"
 
+  # assign intervention method
 
-# Assign intervention method
+# Label taregted interventions (grepl) according to the network metric used
 threshold_counts_final$Method[grepl("^OD", threshold_counts_final$Scenario_final)] <- "Out-degree"
 threshold_counts_final$Method[grepl("^BT", threshold_counts_final$Scenario_final)] <- "Betweenness"
 
-# Keep matched controls separate
+# Keep the random matched controls separate from the targeted interventions
 threshold_counts_final$Method[grepl("CT_OD", threshold_counts_final$Scenario_final)] <- "Control (OD matched)"
 threshold_counts_final$Method[grepl("CT_BT", threshold_counts_final$Scenario_final)] <- "Control (BT matched)"
 
-# Baseline
+# label the baseline scenario
 threshold_counts_final$Method[threshold_counts_final$Scenario_final == "baseline"] <- "Baseline"
 
 
-# Set plotting order
+  # Set plotting order
+# convert intensity to an ordered factor so the panels appear in order wanted rather than alphabetically
 threshold_counts_final$Intensity <- factor(
   threshold_counts_final$Intensity,
   levels = c("High", "Medium", "All", "Baseline")
 )
+
+# convert method to an ordered factor to bars appear in order wanted rather than alphabetically 
 
 threshold_counts_final$Method <- factor(
   threshold_counts_final$Method,
@@ -1107,6 +1119,7 @@ ggplot(
   theme_bw()
 ```
 
+
 ```{r}
 # Duplicate baseline into each intensity panel for relative reduction plot
 
@@ -1173,24 +1186,61 @@ ggplot(
   ) +
   theme_bw()
 ```
+
 NOTE baseline not visible bar because baseline relative outbreak reduction vs baseline = zero! - remove basleine bar?
 
 # YOU ARE HERE 06/06/26
 
-Also NOTE - difference in controll BT vs BT and control OD and OD in 'high' - reflective or incidently removed structurally important farms in random control? Set.seed was used so same 5 farms removed for all 2000 sims - before rerunning many control sims - for each control set calculare mean OD/BT to see if accidently removed high-betweenness farms; re-run with changed seed and compare- sensitivity analysis to see if true result or random chance that structurally important cfarm was picked in control?
+Note relatively small difference between BT control HIGH and BT HIGH
 ```{r}
 table(plot_reduction$Intensity, plot_reduction$Method)
 ```
 LOOK INTO lack of difference between BT control & intevention for 'HIGH'- true or coding anomaly?
 !!!!For stats:!!!!
-Factor 1: intervention type - baseline/OD/BT/CT - does intervention type matter?
+Factor 1: intervention type - baseline/OD/BT/CT - does intervention type matter? - yes/no
 Factor 2: intervention intensity - high/med/all- does intensity matter?
 
 OR simplify - keep all intensities (baseline/high/med/all) and compare OD & BT within each intensity
 
-# YOU ARE HERE 07/08/26
+Stats looking to asnwer:
 
-(b) final outbreak size --> how much dz occurs - use conditional on sustained transmission but show comparison with total/reference above question to show basis.
+QUESTION: the probability of an infection of size >= 10 farms under different interventions/intensities vs baseline and matched controls
+
+1. does probability of establishing an infection (yes/no) over threshold >=10 farms change with intervention type for intensities high/med
+
+  outdegree targetiing:
+  OD high vs baseline
+  OD high vs matched control
+  OD med vs baseline
+  OD med vs matched control
+  
+  Betweenness targeting:
+  BT high vs baseline
+  BT high vs matched contorl
+  BT med vs baseline
+  BT med vs matched control
+
+2. is the change in probability of outbreak change relative to baseline significat with intervention type for intensities high/med? - this does not need to be a statistical test - is an effect size- stat test will be on the underlying binary outcome - is the probability significantly different + relative reduction - how large is the effect.
+
+STORY
+1. probability bar plots
+2. statistical tests - ?Fishers? pairwise targeted vs baseline/control; report p-values; report relative reduction (%) cf baseline = magnitude of effect
+
+# YOU ARE HERE 8/08/26
+
+Do an overall test then a pairwise test? to match other 2 questions - depends what want to answer - doing this version would allow to answer - is OD/BT more effective
+
+DATA - 
+
+  plot and report probability e.g. 1600/2000 sims resulted in outbreak of >=10 farms = 0.8
+  
+  Fishers test - uses exact counts:
+  Create 2x2 table - example: 
+                Established   Not established
+Baseline          1600            400
+Out-degree         600           1400
+
+# (b) final outbreak size --> how much dz occurs - use conditional on sustained transmission but show comparison with total/reference above question to show basis.
 
 conditional on a sustained outbreak occuring, how severe is it?
 
@@ -1204,15 +1254,866 @@ Report - Median, IQR, % reduction relative to baseline
 
 Avoid the problem where median is always 1 because most introducitons die out
 
+```{r}
+# filter simulations above threshold - keep sims where finout outbreak size >= 10
+
+threshold_final <- 10
+
+established_outbreaks <- lapply(
+  sustained_trans,
+  function(x) x[x >= threshold_final]
+)
+```
+```{r}
+#length(established_outbreaks)
+#established_outbreaks
+```
+
+
+```{r}
+# create a dataframe for plotting
+
+plot_sizes <- stack(established_outbreaks)
+colnames(plot_sizes) <- c("Final_size", "Scenario")
+
+# final_size= final number of infected farms
+# scenario = intervention scenario
+```
+```{r}
+# add intervention method & intensity
+plot_sizes <- merge(
+  plot_sizes,
+  threshold_counts_final[, c("Scenario_final", "Method", "Intensity")],
+  by.x = "Scenario",
+  by.y = "Scenario_final"
+)
+plot_sizes_stats <- plot_sizes # save a copy before duplication for stat analysis without baseline x3
+```
+```{r}
+# duplicate baseline into every intensity panel
+
+# extract baseline
+basline_sizes <- subset(plot_sizes, Scenario == "baseline")
+```
+```{r}
+# duplicate baseline
+baseline_sizes <- do.call(
+  rbind,
+  lapply(c("High", "Medium", "All"), function(i) {
+    x <- baseline_sizes
+    x$Intensity <- i
+    x
+  })
+)
+
+baseline_sizes$Method <- "Baseline"
+```
+```{r}
+table(baseline_sizes$Method, baseline_sizes$Intensity)
+```
+```{r}
+# remove original baseline & add duplicated baseline
+plot_sizes <- rbind(
+  subset(plot_sizes, Scenario != "baseline"),
+  baseline_sizes
+)
+```
+```{r}
+table(plot_sizes$Method, plot_sizes$Intensity)
+```
+```{r}
+# set plotting order
+plot_sizes$Intensity <- factor(
+  plot_sizes$Intensity,
+  levels = c("High", "Medium", "All")
+)
+
+plot_sizes$Method <- factor(
+  plot_sizes$Method,
+  levels = c(
+    "Baseline",
+    "Control (OD matched)",
+    "Out-degree",
+    "Control (BT matched)",
+    "Betweenness"
+  )
+)
+```
+```{r}
+# create boxplots
+
+ggplot(
+  plot_sizes,
+  aes(
+    x = Method,
+    y = Final_size,
+    fill = Method
+  )
+) +
+  geom_boxplot() +
+  facet_wrap(~Intensity) +
+  labs(
+    x = "Intervention strategy",
+    y = "Final outbreak size (established outbreaks only)"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+```
+```{r}
+# check the numebr of obs - note low number for OD/BT ALL - not suitable for stat testing, very small sample size?
+table(
+  plot_sizes$Method,
+  plot_sizes$Intensity
+)
+```
+
+Descriptive summary:
+```{r}
+# summarise outbreak sizes
+
+outbreak_summary <- data.frame(
+  Scenario = names(established_outbreaks),
+  N = sapply(established_outbreaks, length), # how many sims exceeded threshold
+  Mean = sapply(established_outbreaks, mean), # average final outbreak size
+  Median = sapply(established_outbreaks, median), # median final outbreak size
+  SD = sapply(established_outbreaks, sd), # variability/standard deviation
+  Min = sapply(established_outbreaks, min), # range
+  Max = sapply(established_outbreaks, max) # range
+)
+
+outbreak_summary
+```
+Statistical Analysis - need individual outbreak sizes - need distribution 
+?given that an outbreak exceeded 10 farms, does the intervention reduce final outbreak size?
+
+```{r}
+# data source
+plot_sizes_stats
+```
+```{r}
+# outcome
+#plot_sizes$Final_size
+```
+
+Use Kruskal-Wallis if skewed (overall comparison), then pairwise comparisons - Dunns? if significant - CARE not to include the duplicated baseline rows in statistical model - baseline should appear only once - use plot_sizes BEFORE baseline duplcation for stat analysis
+
+Visualise distributions - show that final outbreak sizes are not normally distributed - ?right skewed
+
+```{r}
+# histogram of outbreak sizes
+ggplot(plot_sizes_stats,
+       aes(x = Final_size)) +
+  geom_histogram(
+    bins = 30,
+    fill = "steelblue",
+    colour = "black"
+  ) +
+  facet_wrap(~Method) +
+  labs(
+    x = "Final outbreak size (established outbreaks only)",
+    y = "Number of simulations"
+  ) +
+  theme_bw()
+```
+```{r}
+# density plots
+ggplot(plot_sizes_stats,
+       aes(x = Final_size,
+           colour = Method,
+           fill = Method)) +
+  geom_density(alpha = 0.2) +
+  facet_wrap(~Method) +
+  labs(
+    x = "Final outbreak size (established outbreaks only)",
+    y = "Density"
+  ) +
+  theme_bw()
+```
+```{r}
+# density plots
+ggplot(peak_infectious_plot,
+       aes(x = peak_infectious,
+           colour = Method,
+           fill = Method)) +
+  geom_density(alpha = 0.2) +
+  facet_wrap(~Intensity) +
+  labs(
+    x = "Peak outbreak size (established outbreaks only)",
+    y = "Density"
+  ) +
+  theme_bw()
+```
+```{r}
+ggplot(plot_sizes_stats,
+       aes(x = Method,
+           y = Final_size,
+           fill = Method)) +
+  geom_boxplot() +
+  theme_bw()
+```
+Plots show final outbreak distributions were right skewed and contained extreme values - not normally distributed. Therefore, differences in outbreak size among intervention strategies will be assessed using a non-parametric test - e.g. Kruskal wallis +/- individual pairwise tests.
+
+Null hypothesis - the distributions of final outbreak size are the same across all 5 methods
+
+THIS IS A TEST RUN - HAS LUMPED ALL INTENSITIES INTO ONE
+need to repeat analysis separately for each intensity level/include in statistical model
+
+```{r}
+# kruskal-wallis test (overall comparison)
+kruskal.test(
+  Final_size ~ Method,
+  data = plot_sizes_stats
+)
+```
+Reject null hypothesis - p <0.05 - shows that at least one group differs but not which interventions differ
+
+DUNNS TEST - bonferroni
+```{r}
+install.packages("FSA")
+```
+```{r}
+library(FSA)
+
+dunnTest(
+  Final_size ~ Method,
+  data = plot_sizes_stats,
+  method = "bonferroni"
+)
+```
+```{r}
+library(rstatix)
+
+plot_sizes_stats %>%
+  dunn_test(
+    Final_size ~ Method,
+    p.adjust.method = "BH"
+  )
+```
+
+Repeat by group by intensity
+```{r}
+High <- kruskal.test(
+  Final_size ~ Method,
+  data = subset(plot_sizes_stats, Intensity == "High")
+)
+
+Med <- kruskal.test(
+  Final_size ~ Method,
+  data = subset(plot_sizes_stats, Intensity == "Medium")
+)
+
+all <- kruskal.test(
+  Final_size ~ Method,
+  data = subset(plot_sizes_stats, Intensity == "All")
+)
+```
+```{r}
+print("High")
+High
+print("Medium")
+Med
+print("All")
+all
+```
+Shows that within each intervention intensity, final outbreak size differs significantly among methods - pairwise comparison within each intensity
+
+```{r}
+# THIS DOESNT INCLUDE BASELINE
+#high
+dunnTest(
+  Final_size ~ Method,
+  data = subset(plot_sizes_stats, Intensity == "High"),
+  method = "bonferroni"
+)
+```
+```{r}
+unique(plot_sizes_stats$Method)
+```
+YOU ARE HERE - UPDATE TO INCLUDE BASELINE IN STAT TEST
+
+!!!!!STATS (b)!!!!
+
+Stats looking to answer - how does targeted removal of structurally important farms (identified by OD & BT) affect the eventual scale of established outbreaks across different intervention intensities (high, med) - 'all' only visual as small sample size - SCALE
+
+STORY IN REPORT
+1. Density plot - shows distribution shape of peak infectious farms - demostrate skewed/non-normal --> use kruskal wallis
+2. kruskal-wallis test - reports if overall significant difference between intervention methods - test statistic, df, p-value
+3. dunns post hoc test (Bonferroni adjusted) - identifies which specific intervention pairs differ; P.adjusted
+4. boxplot - 3 panels - shows direction & magnitude of change - describes - whether interventions reduced/increased peak infectious farms compared with baseline/contorls. discuss 'ALL' - insufficient sample size for stat test
+
+```{r}
+# 1. density plot
+ggplot(plot_sizes,
+       aes(x = Final_size,
+           colour = Method,
+           fill = Method)) +
+  geom_density(alpha = 0.2) +
+  facet_wrap(~Intensity) +
+  labs(
+    x = "Final outbreak size (established outbreaks only)",
+    y = "Density"
+  ) +
+  theme_bw()
+```
+```{r}
+names(plot_sizes_stats)
+```
+!!!HIGH!!!
+```{r}
+# 2. kruskal-Wallis test
+
+# make baseline have intensity so will be picked up by filter
+plot_sizes_stats_high <- plot_sizes_stats
+
+plot_sizes_stats_high$Intensity[
+  plot_sizes_stats_high$Method == "Baseline"
+] <- "High"
+```
+
+```{r}
+High_FS_KW <- kruskal.test(
+  Final_size ~ Method,# numeric column inside dataframe being compared
+  data = subset(
+    plot_sizes_stats_high,
+    Intensity == "High"
+  )
+)
+
+High_FS_KW
+```
+p<0.05 - reject null- at least one intervention method differs in peak infectious farms under High intensity
+
+Use post-hoc test (Dunn's test with Bonferroni correction) to identify specific differences.
+
+```{r}
+#library(dunn.test)
+
+High_FS_Dunn <- dunn.test(
+  x = subset(
+    plot_sizes_stats_high,
+    Intensity == "High"
+  )$Final_size,
+  g = subset(
+    plot_sizes_stats_high,
+    Intensity == "High"
+  )$Method,
+  method = "bonferroni"
+)
+
+High_FS_Dunn
+```
+Interpret P.adjusted - because Dunn's test performs multiple pairwise comparisons - bonferroni correction
+  
+```{r}
+  # AI - want to view p.adjusted as easy to read table
+High_FS_Dunn_table <- data.frame(
+  Comparison = High_FS_Dunn$comparisons,
+  P_adjusted = round(High_FS_Dunn$P.adjusted, 5)
+)
+
+High_FS_Dunn_table
+```
+
+Dunn’s post-hoc test shows that final outbreak size differed significantly between several methods. Out-degree removal produced significantly smaller outbreaks than its matched control and baseline, while betweenness removal significantly reduced outbreak size compared with baseline but not its matched control. Both matched controls also differed significantly from baseline, suggesting that farm removal itself contributed to reductions in outbreak size.
+
+!!!MEDIUM!!!
+
+
+```{r}
+# 2. kruskal-Wallis test
+
+# make baseline have intensity so will be picked up by filter
+plot_sizes_stats_med <- plot_sizes_stats
+
+plot_sizes_stats_med$Intensity[
+  plot_sizes_stats_med$Method == "Baseline"
+] <- "Medium"
+```
+
+```{r}
+Med_FS_KW <- kruskal.test(
+  Final_size ~ Method,# numeric column inside dataframe being compared
+  data = subset(
+    plot_sizes_stats_med,
+    Intensity == "Medium"
+  )
+)
+
+Med_FS_KW
+```
+p<0.05 - reject null- at least one intervention method differs in peak infectious farms under High intensity
+
+Use post-hoc test (Dunn's test with Bonferroni correction) to identify specific differences.
+
+```{r}
+#library(dunn.test)
+
+Med_FS_Dunn <- dunn.test(
+  x = subset(
+    plot_sizes_stats_med,
+    Intensity == "Medium"
+  )$Final_size,
+  g = subset(
+    plot_sizes_stats_med,
+    Intensity == "Medium"
+  )$Method,
+  method = "bonferroni"
+)
+
+Med_FS_Dunn
+```
+```{r}
+  # AI - want to view p.adjusted as easy to read table
+Med_FS_Dunn_table <- data.frame(
+  Comparison = Med_FS_Dunn$comparisons,
+  P_adjusted = round(Med_FS_Dunn$P.adjusted, 7)
+)
+
+Med_FS_Dunn_table
+```
+1. de
+
+# DEBUGS
+```{r}
+table(plot_sizes$Method, plot_sizes$Intensity)
+```
+```{r}
+unique(plot_sizes$Scenario)
+```
+```{r}
+baseline_sizes <- subset(plot_sizes, Scenario == "baseline")
+
+nrow(baseline_sizes)
+```
+```{r}
+summary(baseline_sizes$Final_size)
+```
+
 (c) peak infectious farms - how intense is outbreak IF THERE IS AN OUTBREAK - explain as above - mean/median peak without <1 sims
 
-If an epidemic occurs, how intense is it?
+When an epidemic occurs (threshold >=10 farms), how intense is it?
 
 Only analyse successful epidemics
 
 Report - median peak infectious farms; IQR; % redution relative to baseline
 
 Aim - measure the epidemic burden on the system; independent of whether an epidemic occured in the first place or not
+Conditional on an epidemic becoming established (>=10 infected farms), what is the maximum number on infectious farms at any one time (peak infectious) - need sim output that stores infectious farms over time = epidemic curve
+
+```{r}
+names(daily_results$SC1)
+# confirm contains the epidemic curves, relevant column = 'infectious'
+```
+```{r}
+head(daily_results$SC1)
+```
+```{r}
+# calculate peak infectious farms for every simulation = max number of infectious farms reached in each simulation
+peak_infectious <- lapply(
+  daily_results,
+  function(x) {
+    x %>%
+      group_by(replicate) %>%
+      summarise(
+        peak_infectious = max(infectious)
+      )
+  }
+)
+```
+```{r}
+names(peak_infectious)
+```
+
+```{r}
+# keep sims where threshold transmission occured
+# create dataframe with replicate/peak_inefctious/scenario
+
+peak_infectious_established <- lapply(
+  names(peak_infectious),
+  function(scenario) {
+    
+    peaks <- peak_infectious[[scenario]]
+    
+    established <- summary_results[[scenario]] %>%
+      filter(final_infected >= threshold_final) %>%
+      select(replicate)
+    
+    peaks %>%
+      filter(replicate %in% established$replicate) %>%
+      mutate(Scenario = scenario)
+  }
+)
+
+peak_infectious_established <- bind_rows(peak_infectious_established)
+```
+```{r}
+head(peak_infectious_established)
+```
+```{r}
+nrow(peak_infectious_established)
+```
+```{r}
+unique(peak_infectious_established$Scenario)
+```
+```{r}
+unique(threshold_counts_final$Scenario_final)
+```
+```{r}
+# create look up table to to map simulation names to scenario labels
+
+scenario_lookup <- data.frame(
+  Scenario = c(
+    "SC1", "SC2", "SC3", "SC4", "SC5", "SC6", "SC7", "SC14", "SC15", "SC16", "SC17", "SC18", "SC19"
+  ),
+  Scenario_final = c(
+    "baseline",  "OD_high", "OD_med", "OD_all", "BT_high", "BT_med", "BT_all", "CT_OD_HIGH", "CT_OD_MED", "CT_OD_ALL", "CT_BT_HIGH", "CT_BT_MED","CT_BT_ALL"
+  )
+)
+```
+
+
+```{r}
+# add method & intensity labels
+peak_infectious_established <- merge(
+  peak_infectious_established,
+  scenario_lookup,
+  by = "Scenario"
+)
+
+peak_infectious_established <- merge(
+  peak_infectious_established,
+  threshold_counts_final[, c("Scenario_final", "Method", "Intensity")],
+  by = "Scenario_final"
+)
+
+peak_infectious_stats <- peak_infectious_established
+```
+```{r}
+#make separate copy for figures
+peak_infectious_plot <- peak_infectious_established
+
+nrow(peak_infectious_plot)
+# lower because has dropped scenarios 8-13
+```
+```{r}
+head(peak_infectious_plot)
+```
+```{r}
+unique(peak_infectious_established$Scenario)
+```
+```{r}
+head(peak_infectious_established)
+```
+```{r}
+unique(peak_infectious_established$Scenario_final)
+```
+```{r}
+table(
+  peak_infectious_established$Method,
+  peak_infectious_established$Intensity
+)
+```
+```{r}
+# duplicate baseline so appears in all 3 panels
+
+# extract basline peak infecitous values
+baseline_peak <- subset(
+  peak_infectious_plot,
+  Method == "Baseline"
+)
+
+# Duplicate baseline into each intensity panel
+baseline_peak <- baseline_peak[
+  rep(1:nrow(baseline_peak), 3),
+]
+
+# assign intensity labels
+baseline_peak$Intensity <- rep(
+  c("High", "Medium", "All"),
+  each = nrow(baseline_peak) / 3
+)
+
+# keep baseline label
+baseline_peak$Method <- "Baseline"
+```
+```{r}
+# remove original baseline and add duplicated baseline back
+peak_infectious_plot <- rbind(
+  subset(peak_infectious_plot, Method != "Baseline"),
+  baseline_peak
+)
+```
+```{r}
+# set plotting order
+peak_infectious_plot$Intensity <- factor(
+  peak_infectious_plot$Intensity,
+  levels = c("High", "Medium", "All")
+)
+
+peak_infectious_plot$Method <- factor(
+  peak_infectious_plot$Method,
+  levels = c("Baseline", "Control (OD matched)",
+             "Out-degree",
+             "Control (BT matched)",
+             "Betweenness"
+             )
+)
+```
+
+```{r}
+unique(peak_infectious_plot$Method)
+```
+```{r}
+table(peak_infectious_plot$Method, useNA = "always")
+```
+```{r}
+# plot
+ggplot(
+  peak_infectious_plot,
+  aes(
+    x = Method,
+    y = peak_infectious,
+    fill = Method
+  )
+) +
+  geom_boxplot() +
+  facet_wrap(~Intensity) +
+  labs(
+    x = "Intervention strategy",
+    y = "Peak infectious farms (established outbreaks only)"
+  )+
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+box = interquartile range (25th - 75th percentile)
+line inside box = median
+whiskers = extend to most extreme values within 1.5x IQR of the box
+dots = values beyond whiskers = outliers
+
+Baseline boxplot - long upper whisker and black dots -> most established outbreaks have moderate peaks, but some produce much larger peaks (black dots are outliers)
+
+E.G.
+outdegree - smaller box with long upper whisker and no upper dots -> peak infectious farms are more tightly clustered, there are no sims producing unusually large epidemic peaks under that intervention (within the established outbreaks that occurred)
+
+no whiskers - very little variation (whisker length essensitlaly zero); the upper/lower whisker overlaps with the box - happens when the largest non-outlier value is close to the upper quartile - whisker is hidden by edge of box/ small sample size - only a few established intervention/intensity combos
+
+```{r}
+# check number of observations - note low number at ALL for BT/OD - no whiskers because small sample size - include this alongside the figure to give context. CARE with stats - very small sample - just report 'ALL' intensity descriptively
+table(
+  peak_infectious_plot$Method,
+  peak_infectious_plot$Intensity
+)
+```
+```{r}
+subset(
+  peak_infectious_plot,
+  Method == "Out-degree" & Intensity == "All"
+)
+```
+```{r}
+head(peak_infectious_stats)
+```
+
+STATS - peak infectious
+
+Answers: at high and medium intensities, did targeted removal useing OD & BT result in a significant reduciton in peak infectious farms compared with baseline and matched random controls?
+
+Addresses scale/severity/dynamics/intensity component of RQ2 - a reduction in peak infectious farms indicates that targeted removal reduces the epidemic burden...
+
+Look at farms in 'high' and compare to those in top5% for annual network - same farms? was temporal useful. Essentially without checking if the random removal plays a part will never know because was significant cf baseline
+
+Show densitiies non-parametric
+
+```{r}
+# density plots
+ggplot(peak_infectious_plot,
+       aes(x = peak_infectious,
+           colour = Method,
+           fill = Method)) +
+  geom_density(alpha = 0.2) +
+  facet_wrap(~Intensity) +
+  labs(
+    x = "Peak infectious size (established outbreaks only)",
+    y = "Density"
+  ) +
+  theme_bw()
+```
+Skewed distribution and heavy right tail all intensities
+Kruskall-Wallis test for intensities high & med for all methods (All - to few samples)
+```{r}
+table(
+  peak_infectious_stats$Method,
+  peak_infectious_stats$Intensity
+)
+```
+```{r}
+unique(peak_infectious_stats$Method)
+```
+!!!!!HIGH!!!
+```{r}
+# make baseline have intensity so will be picked up by filter
+peak_infectious_stats_high <- peak_infectious_stats
+
+peak_infectious_stats_high$Intensity[
+  peak_infectious_stats_high$Method == "Baseline"
+] <- "High"
+```
+
+```{r}
+High_PI_KW <- kruskal.test(
+  peak_infectious ~ Method,# numeric column inside dataframe being compared
+  data = subset(
+    peak_infectious_stats_high,
+    Intensity == "High"
+  )
+)
+
+High_PI_KW
+```
+p<0.05 - reject null- at least one intervention method differs in peak infectious farms under High intensity
+
+Use post-hoc test (Dunn's test with Bonferroni correction) to identify specific differences.
+
+```{r}
+#library(dunn.test)
+
+High_PI_Dunn <- dunn.test(
+  x = subset(
+    peak_infectious_stats_high,
+    Intensity == "High"
+  )$peak_infectious,
+  g = subset(
+    peak_infectious_stats_high,
+    Intensity == "High"
+  )$Method,
+  method = "bonferroni"
+)
+
+High_PI_Dunn
+```
+Interpret P.adjusted - because Dunn's test performs multiple pairwise comparisons - bonferroni correction
+  
+```{r}
+  # AI - want to view p.adjusted as easy to read table
+High_PI_Dunn_table <- data.frame(
+  Comparison = High_PI_Dunn$comparisons,
+  P_adjusted = round(High_PI_Dunn$P.adjusted, 5)
+)
+
+High_PI_Dunn_table
+```
+Significant results, using P.adjusted & significance threshold of p<0.05:
+  Control(OD matched) - out degree = 0.0094
+  Out-degree - baseline = 0.000031
+  Betweenness - baseline = 0.0320
+  
+!!!MEDIUM!!!
+```{r}
+# make baseline have intensity so will be picked up by filter
+peak_infectious_stats_med <- peak_infectious_stats
+
+peak_infectious_stats_med$Intensity[
+  peak_infectious_stats_med$Method == "Baseline"
+] <- "Medium"
+```
+
+```{r}
+MED_PI_KW <- kruskal.test(
+  peak_infectious ~ Method,# numeric column inside dataframe being compared
+  data = subset(
+    peak_infectious_stats_med,
+    Intensity == "Medium"
+  )
+)
+
+MED_PI_KW
+```
+```{r}
+#library(dunn.test)
+
+MED_PI_Dunn <- dunn.test(
+  x = subset(
+    peak_infectious_stats_med,
+    Intensity == "Medium"
+  )$peak_infectious,
+  g = subset(
+    peak_infectious_stats_med,
+    Intensity == "Medium"
+  )$Method,
+  method = "bonferroni"
+)
+
+MED_PI_Dunn
+```
+```{r}
+  # AI - want to view p.adjusted as easy to read table
+Med_PI_Dunn_table <- data.frame(
+  Comparison = MED_PI_Dunn$comparisons,
+  P_adjusted = MED_PI_Dunn$P.adjusted
+)
+
+Med_PI_Dunn_table
+```
+
+PLAIN ENGLISH INTERPRETATION
+across all interventions and inensities - only OD-HIGH provided significant improvement in peak infectious compared to both baseline and controls. 
+
+Betweenness targeting significantly reduced peak infectious farms compared with baseline, but was not significantly different from its matched control. The fact that the matched control also did not differ significantly from baseline suggests that the apparent reduction may be related to targeted removal, but it does not prove it, because the direct comparison between betweenness and its matched contol was not significant!
+
+
+Random removal controls were generated using a fixed random seed to ensure reproducibility. However, because sensitivity anayses across multiple random removal replicates were not performed, uncertainty associated with the choice of random control farms cannot be fully assessed.
+```{r}
+# confirms control matches are correct- this is all from 'high' intensity
+table(
+  subset(
+    peak_infectious_stats_high,
+    Intensity == "High"
+  )$Scenario,
+  subset(
+    peak_infectious_stats_high,
+    Intensity == "High"
+  )$Method
+)
+```
+  
+Statistical significance is assessed at alpha = 0.05. For post-hoc pairwise ocmparisons following significant Kruskal-Wallis tests, Bonferroni-adjusted p-values were used to account for multiple comparisons. Report both the adjusted p-values and the direction of change (e.g. lower peak infectious farms under intervention).
+
+Essentially - in intervention HIGH
+
+STORY IN REPORT
+1. Density plot - shows distribution shape of peak infectious farms - demostrate skewed/non-normal --> use kruskal wallis
+2. kruskal-wallis test - reports if overall significant difference between intervention methods - test statistic, df, p-value
+3. dunns post hoc test (Bonferroni adjusted) - identifies which specific intervention pairs differ; P.adjusted
+4. boxplot - 3 panels - shows direction & magnitude of change - describes - whether interventions reduced/increased peak infectious farms compared with baseline/contorls. discuss 'ALL' - insufficient sample size for stat test
+
+Kruskal-Wallis - https://numiqo.com/video/l86wEhUzkY4 
+
+  hypothesis test used to check whether there is a difference between several independent groups
+  
+  Not analysis of variance because data is not normally distributed and the assumptions for the analysis of variance are not met - use Kruskal-Wallis test
+  
+  is the non-parametric counterpart to single factor analysis of variance
+  
+  Difference between the two tests: 
+    Analysis of variance test - is there a difference between the two means?
+    Kruskal-Wallis test - is there a difference in the rank totals - across all groups - assigns rank in ascending order, computes rank total per group, compares rank totals across all groups - data does not have to satisfy any distribution of form and also dont need it to be normally distributed
+  
+  ASSUMPTIONS  
+  when to use - when have nominal or ordinal variable wth more than 2 expressions/values and a metric or ordinal variable
+  
+  only several independent random samples with at least ordinally scaled characteristics must be available; variables do not have to satisfy a distribution curve.
+  
+  Null hypothesis = the indepdent samples all have hte same central tendency and therefore come from the same population - i.e. there is no difference in the rank sum
+  
+  Alternative hypothesis - at least one of the indepednent samples does not have the same central tendency as the other samples, and therefore comes from a different population - i.e. at least one group differs in rank sum
 
 # ANALYSIS
 Look at anova that is non-parametric - compare BT/OD/baseline and will highlight is there is a significant difference between them - then there is another test that can help find the difference if there is one. NOT using high/med/all - incoporate this?

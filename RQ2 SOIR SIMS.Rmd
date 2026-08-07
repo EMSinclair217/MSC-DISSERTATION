@@ -1163,7 +1163,7 @@ class(scenario_16)
 # Control BT HIGH 
 # Scenario 17 - random removal of 6 farms = control HIGH
 
-set.seed(17) # Set random seed to ensure the same random farms can be selected in future runs.
+set.seed(170) # Set random seed to ensure the same random farms can be selected in future runs.
 
 random_6 <- sample(all_farms, 6)
 
@@ -1775,6 +1775,7 @@ scenario_13_results <- pblapply(
 
 saveRDS(scenario_13_results, "scenario_13_results.rds")
 ```
+# Scenario 14
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
 scenario_14_results <- pblapply(
@@ -1790,6 +1791,7 @@ scenario_14_results <- pblapply(
 
 saveRDS(scenario_14_results, "scenario_14_results.rds")
 ```
+# Scenario 15
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
 scenario_15_results <- pblapply(
@@ -1805,6 +1807,7 @@ scenario_15_results <- pblapply(
 
 saveRDS(scenario_15_results, "scenario_15_results.rds")
 ```
+# Scenario 16
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
 scenario_16_results <- pblapply(
@@ -1820,6 +1823,7 @@ scenario_16_results <- pblapply(
 
 saveRDS(scenario_16_results, "scenario_16_results.rds")
 ```
+# Scenario 17
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
 scenario_17_results <- pblapply(
@@ -1835,6 +1839,7 @@ scenario_17_results <- pblapply(
 
 saveRDS(scenario_17_results, "scenario_17_results.rds")
 ```
+# Scenario 18
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
 scenario_18_results <- pblapply(
@@ -1850,6 +1855,7 @@ scenario_18_results <- pblapply(
 
 saveRDS(scenario_18_results, "scenario_18_results.rds")
 ```
+# Scenario 19
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
 scenario_19_results <- pblapply(
