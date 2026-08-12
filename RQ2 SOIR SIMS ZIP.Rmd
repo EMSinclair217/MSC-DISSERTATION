@@ -1,0 +1,18 @@
+---
+title: "RQ2 SOIR SIMS ZIP"
+author: "ESINCLAIR"
+date: "2026-08-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# import libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(pbapply)
+```

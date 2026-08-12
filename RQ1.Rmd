@@ -34,6 +34,9 @@ C - disc structural heterogeneity, mention temporal heterogeneity (structural he
 library(dplyr)
 library(igraph)
 ```
+```{r}
+citation("igraph")
+```
 Using pipeline created in previous network analysis '12 Month Networks.Rmd'
 
 Data - 1 year synthetic cattle movement data, split into 12 equal dataframes using qcut in python. Entry point, packer removed. Aggregated so that all movement events in one day between 2 premises are 1 event with total_cattle
@@ -106,19 +109,19 @@ plot_movement_network <- function(df, month_label = "XX") {
 
   # Title
   mtext(
-    paste("Monthly Movement Network", month_label),
-    side = 3, line = 0.5, cex = 1.5
+    paste("Period", month_label),
+    side = 3, line = 0.2, cex = 0.8
   )
 
-  # Legend
-  legend(
-    "topright",
-    legend = names(node_colours),
-    col = node_colours,
-    pch = 19,
-    pt.cex = 1.5,
-    bty = "n"
-  )
+  # Legend - comment out for combined panel
+  #legend(
+   # "topright",
+    #legend = names(node_colours),
+    #col = node_colours,
+    #pch = 19,
+    #pt.cex = 1.5,
+    #bty = "n"
+  #)
   # Return the graph object for metrics
   return(g)
 }
@@ -155,6 +158,18 @@ Q12_M12_RQ1 <- read.csv("Q12(D12_RQ1).csv", check.names = TRUE)
 ```{r}
 head(Q12_M1_RQ1)
 ```
+```{r}
+Q12_M12_RQ1 |>
+  count(org_id, dest_id) |>
+  filter(n > 1)
+```
+```{r}
+Q12_M12_RQ1 |>
+  filter(
+    (org_id == 20 & dest_id == 67) |
+    (org_id == 20 & dest_id == 242)
+  )
+```
 # A - create networks & visualise (clarify that is descriptive not analytical - that is from metrics), compute network metrics to show consistency in structure - structural features - density/component size/diameter, presence/absence of cycles etc. In theory - will set up argument that the network does exhibit structural heterogeneity over time.
 
 ADD NETWORK FOR WHOLE YEAR HERE
@@ -162,24 +177,42 @@ ADD NETWORK FOR WHOLE YEAR HERE
 Call function for all 12 months 
 
 ```{r}
-#par(mfrow = c(6, 2), mar = c(0,0,0,0), oma = c(4,0,0,0)) # 3 rows, 4 columns, no margins
+par(mfrow = c(4, 4), mar = c(0,0,1.5,0), oma = c(0,0,0,0)) # 3 rows, 4 columns, no margins
 
-g_M1_RQ1 <- plot_movement_network(Q12_M1_RQ1, "Month 1")
-g_M2_RQ1 <- plot_movement_network(Q12_M2_RQ1, "Month 2")
-g_M3_RQ1 <- plot_movement_network(Q12_M3_RQ1, "Month 3")
-g_M4_RQ1 <- plot_movement_network(Q12_M4_RQ1, "Month 4")
-g_M5_RQ1 <- plot_movement_network(Q12_M5_RQ1, "Month 5")
-g_M6_RQ1 <- plot_movement_network(Q12_M6_RQ1, "Month 6")
-g_M7_RQ1 <- plot_movement_network(Q12_M7_RQ1, "Month 7")
-g_M8_RQ1 <- plot_movement_network(Q12_M8_RQ1, "Month 8")
-g_M9_RQ1 <- plot_movement_network(Q12_M9_RQ1, "Month 9")
-g_M10_RQ1 <- plot_movement_network(Q12_M10_RQ1, "Month 10")
-g_M11_RQ1 <- plot_movement_network(Q12_M11_RQ1, "Month 11")
-g_M12_RQ1 <- plot_movement_network(Q12_M12_RQ1, "Month 12")
+# plot all 12 networks
 
-#par(mfrow = c(1, 1))   # reset afterwards
+g_M1_RQ1 <- plot_movement_network(Q12_M1_RQ1, "1")
+g_M2_RQ1 <- plot_movement_network(Q12_M2_RQ1, "2")
+g_M3_RQ1 <- plot_movement_network(Q12_M3_RQ1, "3")
+g_M4_RQ1 <- plot_movement_network(Q12_M4_RQ1, "4")
+g_M5_RQ1 <- plot_movement_network(Q12_M5_RQ1, "5")
+g_M6_RQ1 <- plot_movement_network(Q12_M6_RQ1, "6")
+g_M7_RQ1 <- plot_movement_network(Q12_M7_RQ1, "7")
+g_M8_RQ1 <- plot_movement_network(Q12_M8_RQ1, "8")
+g_M9_RQ1 <- plot_movement_network(Q12_M9_RQ1, "9")
+g_M10_RQ1 <- plot_movement_network(Q12_M10_RQ1, "10")
+g_M11_RQ1 <- plot_movement_network(Q12_M11_RQ1, "11")
+g_M12_RQ1 <- plot_movement_network(Q12_M12_RQ1, "12")
+
+# Shared legend
+par(fig = c(0, 1, 0, 0.08), new = TRUE, mar = c(0, 0, 0, 0))
+
+plot.new()
+
+legend(
+  "center",
+  legend = names(node_colours),
+  col = node_colours,
+  pch = 19,
+  pt.cex = 1.5,
+  horiz = TRUE,
+  bty = "n"
+)
+
+par(mfrow = c(1, 1))   # reset afterwards
 ```
 ```{r}
+# for poster
 png("Month8_Movement_Network.png",
     width = 2000,
     height = 1500,
@@ -209,7 +242,7 @@ monthly_network_stats <- lapply(monthly_graphs, function(g) {
 })
 ```
 ```{r}
-monthly_network_stats[[1]]
+monthly_network_stats[[4]]
 ```
 ```{r}
 # as a table
@@ -478,7 +511,7 @@ monthly_metrics <- lapply(monthly_graphs, function(g) {
 ```{r}
 #install.packages("randomcoloR")
 library(randomcoloR)
-
+# colour look up
 all_nodes <- unique(unlist(lapply(monthly_metrics, function(m) m$node)))
 node_cols <- setNames(distinctColorPalette(length(all_nodes)), all_nodes)
 
@@ -568,7 +601,7 @@ for(i in seq_along(monthly_metrics)){ # loops through each months network metric
        lwd = 2,
        xlab = "Farm rank",
        ylab = "Out-degree",
-       main = paste("Month", i))
+       main = paste("Period", i))
   
  # cutoff <- quantile(deg, 0.95) # this makes top 5% by quantile not count - DIFFERENT be sure to include in methodolgy
   
@@ -607,7 +640,7 @@ barplot(
   cex.names = 0.4,
   col = "forestgreen",
   main = "Farm Persistence in Top 5% Outdegree",
-  ylab = "Number of Months Appearing in Top 5%",
+  ylab = "Number of Periods Appearing in Top 5%",
   xlab = "Farm ID"
 )
 ```
@@ -643,7 +676,7 @@ Create lists for scenarios in RQ2
 ```{r}
 OD_persistence <- data.frame(
   farm = names(counts), # farm IDs
-  months_top5 = as.numeric(counts) # numebr of months each farm appeared in the top 5% betweeness list
+  months_top5 = as.numeric(counts) # numebr of months each farm appeared in the top 5% outdegree list
 )
 ```
 ```{r}
@@ -865,6 +898,71 @@ BT_any_persistence
 length(BT_any_persistence) # number removed
 ```
 
+```{r}
+counts_BT[counts_BT > 7]
+```
+```{r}
+print("High")
+BT_high_persistence
+print("med")
+BT_med_persistence
+print("any")
+BT_any_persistence
+```
+```{r}
+# Corrected top-5% betweenness persistence
+# Only periods with non-zero betweenness are included
+
+monthly_top5_betw_corrected <- lapply(monthly_metrics, function(m) {
+
+  # Skip periods where all betweenness values are zero
+  if (max(m$betweenness) == 0) {
+    return(character(0))
+  }
+
+  n_top <- ceiling(0.05 * nrow(m))
+
+  top <- m[order(-m$betweenness), ][1:n_top, ]
+
+  top$node
+})
+```
+```{r}
+top5_long_BT_corrected <- data.frame(
+  month = rep(1:12, sapply(monthly_top5_betw_corrected, length)),
+  node = unlist(monthly_top5_betw_corrected)
+)
+
+counts_BT_corrected <- table(top5_long_BT_corrected$node)
+
+counts_BT_corrected
+```
+```{r}
+BT_high_corrected <- names(counts_BT_corrected[counts_BT_corrected >= 6])
+
+BT_med_corrected <- names(counts_BT_corrected[counts_BT_corrected >= 4])
+
+BT_any_corrected <- names(counts_BT_corrected[counts_BT_corrected >= 1])
+```
+
+```{r}
+setdiff(BT_high_persistence, BT_high_corrected)
+```
+```{r}
+setdiff(BT_med_persistence, BT_med_corrected)
+```
+```{r}
+setdiff(BT_med_corrected, BT_med_persistence)
+```
+```{r}
+setdiff(BT_any_persistence, BT_any_corrected)
+```
+```{r}
+setdiff(BT_any_corrected, BT_any_persistence)
+```
+```{r}
+setdiff(BT_high_corrected, BT_high_persistence)
+```
 
 
 Create comparison table:
@@ -1133,8 +1231,7 @@ monthly_top5_OD <- lapply(monthly_metrics_scaled1, function(m) {
 
 ```{r}
 ### 2. Parallel plot showing ALL farms, with top 5% highlighted in red
-library(tidyr)
-library(ggplot2)
+
 
 monthly_plots_ODTOP5 <- lapply(monthly_top5_OD, function(m) {
 
@@ -1177,8 +1274,7 @@ node_cols_OD <- setNames(distinctColorPalette(length(all_top_nodes_OD)), all_top
 ```
 ```{r}
 ### 6. Build parallel‑coordinates plot using ONLY top 5% farms
-library(tidyr)
-library(ggplot2)
+
 
 monthly_plots_top5_OD <- lapply(monthly_top5_only_OD, function(m) {
 
@@ -1228,8 +1324,7 @@ monthly_top5_BT <- lapply(monthly_metrics_scaled1, function(m) {
 ```
 ```{r}
 # parallel plot showing all farms, top 5% highlighted in red
-library(tidyr)
-library(ggplot2)
+
 
 monthly_plots_BTTOP5 <- lapply(monthly_top5_BT, function(m) {
 
@@ -1266,7 +1361,7 @@ monthly_top5_only_BT <- lapply(monthly_top5_BT, function(m) {
 ```
 ```{r}
 # assign unique colours to each farm ID
-library(randomcoloR)
+
 
 all_top_nodes_BT <- unique(unlist(lapply(monthly_top5_only_BT, function(m) m$node)))
 

@@ -1,0 +1,881 @@
+---
+title: "RQ1 zip code"
+author: "ESINCLAIR"
+date: "2026-08-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# LIBRARIES
+library(dplyr)
+library(igraph)
+library(randomcoloR)
+library(ggplot2)
+library(tidyr)
+```
+
+# Network construction and overall structure
+
+Construct 12 period-specific networks
+
+```{r}
+# copy of graph pipeline function - modified to make one panel of 12 graphs
+node_colours <- c(
+  "Cow-Calf" = "green",
+  "Starter Feedlot" = "purple",
+  "Finishing Feedlot" = "orange"
+)
+
+# margins
+par(mar = c(0,0,0,0), oma = c(2,0,0,0)) # hash this is doing 12 plot layout
+
+plot_movement_network <- function(df, month_label = "XX") {
+
+  # convert IDs to character before building nodes and edges
+  df$org_id  <- as.character(df$org_id)
+  df$dest_id <- as.character(df$dest_id)
+
+  # 1. Node table
+  org_nodes  <- df[, c("org_id", "org_type")]
+  colnames(org_nodes) <- c("name", "type")
+
+  dest_nodes <- df[, c("dest_id", "dest_type")]
+  colnames(dest_nodes) <- c("name", "type")
+
+  nodes <- unique(rbind(org_nodes, dest_nodes))
+
+  # 2. Edge list
+  edges <- df[, c("org_id", "dest_id")]
+
+  # 3. Graph
+  g <- graph_from_data_frame(
+    d = edges,
+    vertices = nodes,
+    directed = TRUE
+  )
+
+  # Add weights
+  
+  E(g)$weight <- df$total_cattle # 'E(g) is igraphs built-in edge sequence, meaning 'all edges in graph' - so this adds a new attribute called 'weight' to each edge
+  
+  # 4. Colours
+  cols <- node_colours[V(g)$type]
+  # margins
+  #par(mar = c(0,0,0,0), oma = c(4,0,0,0)) # hash this is doing 12 plot layout
+
+  # 5. Layers
+  layer_order <- c("Cow-Calf",
+                   "Starter Feedlot",
+                   "Finishing Feedlot")
+
+  V(g)$layer <- as.numeric(factor(V(g)$type, levels = layer_order))
+
+  # Layout
+  lay <- layout_with_sugiyama(g, layers = V(g)$layer)$layout
+
+  # Plot
+  plot(
+    g,
+    layout = lay,
+    vertex.color = cols,
+    vertex.label = NA,# V(g)$name - change to this if want ID numbers printed
+    vertex.size = 25,
+    vertex.label.cex = 0.9,
+    edge.arrow.size = 0.5
+  )
+
+  # Title
+  mtext(
+    paste("Period", month_label),
+    side = 3, line = 0.2, cex = 0.8
+  )
+
+  # Legend - comment out for combined panel
+  #legend(
+   # "topright",
+    #legend = names(node_colours),
+    #col = node_colours,
+    #pch = 19,
+    #pt.cex = 1.5,
+    #bty = "n"
+  #)
+  # Return the graph object for metrics
+  return(g)
+}
+```
+
+Import data 
+
+```{r}
+Q12_M1_RQ1 <- read.csv("Q12(D1_RQ1).csv", check.names = TRUE) # tells R to sanitise column names
+#head(Q12_M1)
+Q12_M2_RQ1 <- read.csv("Q12(D2_RQ1).csv", check.names = TRUE) 
+#head(Q12_M2)
+Q12_M3_RQ1 <- read.csv("Q12(D3_RQ1).csv", check.names = TRUE) 
+#head(Q12_M3)
+Q12_M4_RQ1 <- read.csv("Q12(D4_RQ1).csv", check.names = TRUE) 
+#head(Q12_M4)
+Q12_M5_RQ1 <- read.csv("Q12(D5_RQ1).csv", check.names = TRUE) 
+#head(Q12_M5)
+Q12_M6_RQ1 <- read.csv("Q12(D6_RQ1).csv", check.names = TRUE) 
+#head(Q12_M6)
+Q12_M7_RQ1 <- read.csv("Q12(D7_RQ1).csv", check.names = TRUE) 
+#head(Q12_M7)
+Q12_M8_RQ1 <- read.csv("Q12(D8_RQ1).csv", check.names = TRUE) 
+#head(Q12_M18)
+Q12_M9_RQ1 <- read.csv("Q12(D9_RQ1).csv", check.names = TRUE) 
+#head(Q12_M9)
+Q12_M10_RQ1 <- read.csv("Q12(D10_RQ1).csv", check.names = TRUE) 
+#head(Q12_M10)
+Q12_M11_RQ1 <- read.csv("Q12(D11_RQ1).csv", check.names = TRUE) 
+#head(Q12_M11)
+Q12_M12_RQ1 <- read.csv("Q12(D12_RQ1).csv", check.names = TRUE) 
+#head(Q12_M12)
+```
+
+```{r}
+# call function for all 12 periods and plot as panel with legend
+
+par(mfrow = c(4, 4), mar = c(0,0,1.5,0), oma = c(0,0,0,0)) # 3 rows, 4 columns, no margins
+
+# plot all 12 networks
+
+g_M1_RQ1 <- plot_movement_network(Q12_M1_RQ1, "1")
+g_M2_RQ1 <- plot_movement_network(Q12_M2_RQ1, "2")
+g_M3_RQ1 <- plot_movement_network(Q12_M3_RQ1, "3")
+g_M4_RQ1 <- plot_movement_network(Q12_M4_RQ1, "4")
+g_M5_RQ1 <- plot_movement_network(Q12_M5_RQ1, "5")
+g_M6_RQ1 <- plot_movement_network(Q12_M6_RQ1, "6")
+g_M7_RQ1 <- plot_movement_network(Q12_M7_RQ1, "7")
+g_M8_RQ1 <- plot_movement_network(Q12_M8_RQ1, "8")
+g_M9_RQ1 <- plot_movement_network(Q12_M9_RQ1, "9")
+g_M10_RQ1 <- plot_movement_network(Q12_M10_RQ1, "10")
+g_M11_RQ1 <- plot_movement_network(Q12_M11_RQ1, "11")
+g_M12_RQ1 <- plot_movement_network(Q12_M12_RQ1, "12")
+
+# Shared legend
+par(fig = c(0, 1, 0, 0.08), new = TRUE, mar = c(0, 0, 0, 0))
+
+plot.new()
+
+legend(
+  "center",
+  legend = names(node_colours),
+  col = node_colours,
+  pch = 19,
+  pt.cex = 1.5,
+  horiz = TRUE,
+  bty = "n"
+)
+
+par(mfrow = c(1, 1))   # reset afterwards
+```
+Calculate network level metrics
+
+```{r}
+# put all months into one list
+monthly_data <- list(
+  Q12_M1_RQ1,
+  Q12_M2_RQ1,
+  Q12_M3_RQ1,
+  Q12_M4_RQ1,
+  Q12_M5_RQ1,
+  Q12_M6_RQ1,
+  Q12_M7_RQ1,
+  Q12_M8_RQ1,
+  Q12_M9_RQ1,
+  Q12_M10_RQ1,
+  Q12_M11_RQ1,
+  Q12_M12_RQ1
+)
+```
+```{r}
+# name the list so know which month is which
+names(monthly_data) <- paste0("Period_", 1:12)
+```
+```{r}
+# build 12 networks using lapply
+
+monthly_graphs <- lapply(monthly_data, function(d) {
+  g <- graph_from_data_frame(
+    d[, c("org_id", "dest_id")], # N.B. does not contain node type - but this is not used in analysis
+    directed = TRUE
+  )
+  E(g)$weight <- d$total_cattle
+  g
+})
+
+```
+```{r}
+# compute network level metrics
+monthly_network_stats <- lapply(monthly_graphs, function(g) {
+  list(
+    total_nodes = vcount(g),
+    total_edges = ecount(g),
+    density = edge_density(g, loops = FALSE),
+    largest_component = max(components(g, mode = "weak")$csize), # weakly connected - direction ingnored
+    diameter = diameter(g, directed = FALSE, weights = NA) # N.B. this isnt weighted - measures the shortest topological path, not the cattle-volume-weigthed path
+  )
+})
+```
+```{r}
+# turn into a table
+
+monthly_network_summary <- do.call(
+  rbind,
+  lapply(seq_along(monthly_network_stats), function(i) {
+    data.frame(
+      Period = paste0("Period_", i),
+      total_edges = monthly_network_stats[[i]]$total_edges,
+      total_nodes = monthly_network_stats[[i]]$total_nodes,
+      largest_component = monthly_network_stats[[i]]$largest_component,
+      density = monthly_network_stats[[i]]$density,
+      diameter = monthly_network_stats[[i]]$diameter
+    )
+  })
+)
+```
+```{r}
+monthly_network_summary
+```
+REF - network analysis descriptive review paper
+
+1. Network Density (0-1) = proportion of possible edges that actually exist (equation for this). high = many connected farms = infection spreads easily
+2. component size - size of the largest weakly connected component (ignores direction) - large - infection can reach many farms, network not fragmented
+3. diameter - longest shortest pat between any two nodes - use weakly connected diameter - large = longmovement chains -> bridging farms matter/small diameter - compact network - outdegree dominates
+
+# Calculate node level metrics
+
+```{r}
+# compute node metrics for each month
+monthly_metrics_nodes <- lapply(monthly_graphs, function(g) {
+  data.frame(
+    node = V(g)$name,
+    outdegree = degree(g, mode = "out"),
+    strength_out = strength(g, mode = "out", weights = E(g)$weight),
+    betweenness = betweenness(g, weights = E(g)$weight)
+  )
+})
+
+```
+```{r}
+# create summary table with monthly node-level metrics
+
+monthly_node_summary <- do.call(
+  rbind,
+  lapply(seq_along(monthly_metrics_nodes), function(i) {
+    
+    m <- monthly_metrics_nodes[[i]]
+    
+    data.frame(
+      Period = paste0("Period_", i),
+      median_outdegree = median(m$outdegree),
+      max_outdegree = max(m$outdegree),
+      outdegree_95th = quantile(m$outdegree, 0.95),
+      
+      median_strength_out = median(m$strength_out),
+      max_strength_out = max(m$strength_out),
+      stength_out_95th = quantile(m$strength_out, 0.95),
+      
+      median_betweenness = median(m$betweenness),
+      max_betweenness = max(m$betweenness),
+      betweenness_95th = quantile(m$betwenness_out, 0.95)
+    )
+  })
+)
+```
+```{r}
+monthly_node_summary
+```
+
+# Identify structurally important farms
+
+OUTDEGREE
+
+```{r}
+# define what counts as structuraly important - justify top 5% threshold using ranked centrality distributions and visible elbow/cut off
+# ranked out degree plot to look at 5% threshold
+par(mfrow = c(3,4), mar = c(4,4,3,1)) # plotting window for grid
+
+for(i in seq_along(monthly_metrics)){ # loops through each months network metrics stored in monthly_metrics
+
+  m <- monthly_metrics[[i]]
+
+  deg <- sort(m$outdegree, decreasing = TRUE) # sorts farms descending by OD
+
+  plot(deg,
+       type = "l",
+       lwd = 2,
+       xlab = "Farm rank",
+       ylab = "Out-degree",
+       main = paste("Period", i))
+  
+ # cutoff <- quantile(deg, 0.95) # this makes top 5% by quantile not count - DIFFERENT be sure to include in methodolgy
+  
+  #cutoff_rank <- max(which(deg >= cutoff))
+
+  cutoff_rank <- ceiling(0.05 * length(deg)) # calculates the rank corresponding to the top 5% of farms - by count as per rest of analysis
+
+  abline(v = cutoff_rank, col = "red", lty = 2, lwd = 2) # vertical dashed line a 5% threshold
+}
+```
+
+```{r}
+# colour look-up
+all_nodes <- unique(unlist(lapply(monthly_metrics, function(m) m$node)))
+node_cols <- setNames(distinctColorPalette(length(all_nodes)), all_nodes)
+```
+Identify structurally important farms through time
+which farms are structurally important at each point in time
+```{r}
+# identify top 5% outdegree rank each month + plot - selects the top 5% of farms numerically by rank
+barplots_outdeg <- lapply(seq_along(monthly_metrics), function(i) {
+
+  m <- monthly_metrics[[i]]
+
+  n_top <- ceiling(0.05 * nrow(m))
+
+  top_DO <- m[order(-m$outdegree), ][1:n_top, ]
+  top_DO <- top_DO[order(-top_DO$outdegree), ]
+
+  barplot(
+    top_DO$outdegree,
+    names.arg = top_DO$node,
+    las = 2,
+    col = node_cols[top_DO$node],
+    main = paste("Top 5% Farms by Outdegree - Period", i),
+    ylab = "Number of Farms Sent Cattle To",
+    xlab = "Farm ID"
+  )
+})
+```
+As a table:
+```{r}
+# create peiods top 5% table
+monthly_top5_outdeg <- lapply(monthly_metrics, function(m) {
+  n_top <- ceiling(0.05 * nrow(m))
+  top <- m[order(-m$outdegree), ][1:n_top, ]
+  top$node
+})
+```
+```{r}
+# create table
+max_len <- max(sapply(monthly_top5_outdeg, length))
+
+monthly_top5_padded <- lapply(monthly_top5_outdeg, function(x) {
+  c(x, rep(NA, max_len - length(x)))
+})
+
+top5_table <- do.call(cbind, monthly_top5_padded)
+colnames(top5_table) <- paste0("Period_", seq_along(monthly_top5_padded))
+top5_table
+```
+```{r}
+# persistence analysis
+# convert monthly rankings into longitudinal measure
+top5_long <- data.frame(
+  month = rep(1:12, sapply(monthly_top5_outdeg, length)),
+  node = unlist(monthly_top5_outdeg)
+)
+
+counts <- table(top5_long$node)
+counts_sorted <- sort(counts, decreasing = TRUE)
+persistence_distribution <- table(counts)
+counts_sorted
+persistence_distribution
+```
+```{r}
+# persistence plot - in how many of the 12 periods does each farm appear in the top 5%
+
+barplot(
+  counts_sorted,
+  las = 2,
+  cex.names = 0.4,
+  col = "forestgreen",
+  main = "Outdegree Persistence",
+  ylab = "No. of Periods Appear in Top 5%",
+  xlab = "Farm ID"
+)
+```
+e.g. a farm appearing in 1 period = highly transient/volatile
+many months = persistent structural importance etc
+```{r}
+# persistence distribution plot - shows distribution of temporal persistence across the farm population - from thic can describe whether structural importance is predominantly persistent or transient
+
+persistence_df <- data.frame(
+  months = as.numeric(names(persistence_distribution)),
+  farms = as.numeric(persistence_distribution)
+)
+
+ggplot(persistence_df, aes(x = months, y = farms)) +
+  geom_col() +
+  labs(
+    x = "Number of months appearing in top 5% outdegree",
+    y = "Number of farms",
+    title = "Persistence distribution of high outdegree farms"
+  ) +
+  theme_classic()
+```
+
+Create lists for scenarios in RQ2
+```{r}
+OD_persistence <- data.frame(
+  farm = names(counts), # farm IDs
+  months_top5 = as.numeric(counts) # numebr of months each farm appeared in the top 5% outdegree list
+)
+```
+```{r}
+# farms in top 5% OD 8 or more months
+OD_high_persistence <- OD_persistence %>%
+  filter(months_top5 >= 8) %>%
+  pull(farm)
+# saved in current working directory
+saveRDS(
+  OD_high_persistence,
+  "outdegree_high_persistent.rds"
+)
+
+OD_high_persistence
+length(OD_high_persistence) # number removed
+```
+```{r}
+# Farms in top 5% OD & appear in 6 or more months
+OD_med_persistence <- OD_persistence %>%
+  filter(months_top5 >= 6) %>%
+  pull(farm)
+
+saveRDS(
+  OD_med_persistence, "Outdegree_med_persistent.rds"
+)
+
+OD_med_persistence
+length(OD_med_persistence) # number removed
+```
+```{r}
+# Farms in top 5% OD & appear in any months
+OD_all_candidates <- OD_persistence %>%
+  filter(months_top5 >= 1) %>%
+  pull(farm)
+
+saveRDS(
+  OD_all_candidates, "outdegree_all_candidates.rds"
+)
+
+OD_all_candidates
+length(OD_all_candidates) # number removed
+```
+
+BETWEENNESS
+
+repeat above pipeline (limitation of months 1-5 have betweenness = 0 for all farms).
+Remember thresholds are not statistically validated thresholds = analytical persistence thresholds used to create candidate groups for RQ2 analysis. 
+
+```{r}
+# ranked BETWEENNESS plot to look at 5% threshold
+# red line = the rank corresponding to the top 5% of farms
+
+par(mfrow = c(3,4), mar = c(4,4,3,1)) # plotting window for grid
+
+for(i in seq_along(monthly_metrics)){ # loops through each months network metrics stored in monthly_metrics
+
+  m_BT <- monthly_metrics[[i]]
+
+  deg_BT <- sort(m_BT$betweenness, decreasing = TRUE) # sorts farms descending by BT
+
+  plot(deg_BT,
+       type = "l",
+       lwd = 2,
+       xlab = "Farm rank",
+       ylab = "Betweenness",
+       main = paste("Month", i))
+  
+ # cutoff <- quantile(deg, 0.95) # this makes top 5% by quantile not count - DIFFERENT be sure to include in methodolgy
+  
+  #cutoff_rank <- max(which(deg >= cutoff))
+
+  cutoff_rank_BT <- ceiling(0.05 * length(deg_BT)) # calculates the rank corresponding to the top 5% of farms - by count as per rest of analysis
+
+  abline(v = cutoff_rank_BT, col = "red", lty = 2, lwd = 2) # vertical dashed line a 5% threshold
+}
+```
+```{r}
+# Create colour lookup for all nodes across all months
+all_nodes <- unique(unlist(lapply(monthly_metrics, function(m) m$node)))
+node_cols <- setNames(distinctColorPalette(length(all_nodes)), all_nodes)
+```
+
+```{r}
+# Barplots for top 5% by betweenness
+barplots_betw <- lapply(seq_along(monthly_metrics), function(i) {
+
+  m <- monthly_metrics[[i]]
+
+  n_top <- ceiling(0.05 * nrow(m))
+
+  # Order by betweenness (descending)
+  top_BW <- m[order(-m$betweenness), ][1:n_top, ]
+  top_BW <- top_BW[order(-top_BW$betweenness), ]
+
+  barplot(
+    top_BW$betweenness,
+    names.arg = top_BW$node,
+    las = 2,
+    col = node_cols[top_BW$node],
+    main = paste("Betweenness Top 5% Farms - Period", i),
+    ylab = "Betweenness Centrality",
+    xlab = "Farm ID"
+  )
+})
+```
+
+Code here corrected to remove false top 5% farms that were generated in first 5 months when there is no betweenness - for original code & debugs see RQ1 notebook
+```{r}
+# as table
+# top 5% for betweeness
+monthly_top5_betw2 <- lapply(monthly_metrics, function(m) {
+  
+  if(max(m$betweenness) == 0) {
+    return(character(0))
+  }
+  
+  n_top <- ceiling(0.05 * nrow(m))
+  top <- m[order(-m$betweenness), ][1:n_top, ]
+  top$node
+})
+```
+```{r}
+# pad months to equal length
+max_len <- max(sapply(monthly_top5_betw2, length))
+
+# add NAs to shorter monthly lists so every month has same number rows
+monthly_top5_padded2 <- lapply(monthly_top5_betw2, function(x) {
+  c(x, rep(NA, max_len - length(x)))
+})
+```
+```{r}
+# build comparison table
+top5_table2 <- do.call(cbind, monthly_top5_padded2)
+colnames(top5_table2) <- paste0("Period_", seq_along(monthly_top5_padded2))
+top5_table2
+```
+```{r}
+top5_long_BT2 <- data.frame(
+  month = rep(1:12, sapply(monthly_top5_betw2, length)),
+  node  = unlist(monthly_top5_betw2)
+)
+
+counts_BT2 <- table(top5_long_BT2$node)
+counts_BT_sorted2 <- sort(counts_BT2, decreasing = TRUE)
+persistence_distribution_BT2 <- table(counts_BT2)
+counts_BT2
+persistence_distribution_BT2
+```
+```{r}
+# persistence plot
+barplot(
+  counts_BT_sorted2,
+  las = 2,
+  cex.names = 0.4,
+  col = "forestgreen",
+  main = "Farm Persistence in Top 5% Betweeness",
+  ylab = "Number of Periods Appearing in Top 5%",
+  xlab = "Farm ID"
+)
+```
+```{r}
+# Persistence distribution of betweenness farms
+persistence_df_BT2 <- data.frame(
+  months = as.numeric(names(persistence_distribution_BT2)),
+  farms = as.numeric(persistence_distribution_BT2)
+)
+
+ggplot(persistence_df_BT2, aes(x = months, y = farms)) +
+  geom_col() +
+  labs(
+    x = "Number of periods appearing in top 5% betweeness",
+    y = "Number of farms",
+    title = "Persistence distribution of high betweeness farms"
+  ) +
+  theme_classic()
+```
+# Create data for RQ2
+
+```{r}
+BT_persistence2 <- data.frame(
+  farm = names(counts_BT2), # farm IDs
+  months_top5 = as.numeric(counts_BT2) # numebr of months each farm appeared in the top 5% betweeness list
+)
+```
+
+```{r}
+# farms in top 5% BT >= 6 months
+BT_high_persistence2 <- BT_persistence2 %>%
+  filter(months_top5 >= 6) %>%
+  pull(farm)
+
+
+BT_high_persistence2
+length(BT_high_persistence2) # numebr removed
+```
+```{r}
+# Farms in top 5% BT & appear in 4 or more months
+BT_med_persistence2 <- BT_persistence2 %>%
+  filter(months_top5 >= 4) %>%
+  pull(farm)
+
+BT_med_persistence2
+length(BT_med_persistence2) # number removed
+```
+```{r}
+# Farms in top 5% BT & appear in any months
+BT_any_persistence2 <- BT_persistence2 %>%
+  filter(months_top5 >= 1) %>%
+  pull(farm)
+
+BT_any_persistence2
+length(BT_any_persistence2) # number removed
+```
+```{r}
+# saved in current working directory
+saveRDS(BT_high_persistence2, "BT_high_persistent_corrected.rds")
+saveRDS(BT_med_persistence2, "BT_med_persistent_corrected.rds")
+saveRDS(BT_any_persistence2, "BT_any_persistent_corrected.rds")
+```
+
+What these analyses show:
+
+  threshold analysis- why was top 5% selected as the definitionof structural importance
+  
+  period-specific analysis - which farms were structurally important in each period
+  
+  persistence analysis - to what extent was structural importance persistent or transient across the study period
+  
+# Multidimensional 
+
+standardise OD/strength/BT
+parallel-coordinate plots
+examine how farms identified by each metric behave across the other metrics
+demonstrate that structural importannce is multidimensional
+
+```{r}
+# standardise the three node-level metrics
+monthly_metrics_scaled <- lapply(monthly_metrics_nodes, function(m) {
+
+  m$outdeg_scaled <- (m$outdegree - min(m$outdegree)) /
+    (max(m$outdegree) - min(m$outdegree))
+
+  m$strength_scaled <- (m$strength_out - min(m$strength_out)) /
+    (max(m$strength_out) - min(m$strength_out))
+
+  # Betweenness can be zero for all farms in early periods
+  if (max(m$betweenness) == min(m$betweenness)) {
+    m$betweenness_scaled <- 0
+  } else {
+    m$betweenness_scaled <- (m$betweenness - min(m$betweenness)) /
+      (max(m$betweenness) - min(m$betweenness))
+  }
+
+  m
+})
+```
+```{r}
+# make the general parallel coordinate plots
+monthly_plots <- lapply(monthly_metrics_scaled, function(m) {
+
+  df_long <- m |>
+    pivot_longer(
+      cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  ggplot(
+    df_long,
+    aes(x = metric, y = value, group = node)
+  ) +
+    geom_line(alpha = 0.4) +
+    theme_minimal()
+})
+```
+```{r}
+# example
+monthly_plots[[8]]
+```
+```{r}
+# highlight the top 5% oudegree farms by farm rank/count
+
+monthly_top5_OD_multi <- lapply(monthly_metrics_scaled, function(m) {
+
+  n_top <- ceiling(0.05 * nrow(m))
+
+  top_nodes <- m$node[
+    order(m$outdegree, decreasing = TRUE)[1:n_top]
+  ]
+
+  m$top5_OD <- m$node %in% top_nodes
+
+  m
+})
+```
+```{r}
+# make highlighted parallel plots - OUTDEGREE
+monthly_plots_ODTOP5 <- lapply(monthly_top5_OD_multi, function(m) {
+
+  df_long <- m |>
+    pivot_longer(
+      cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  ggplot(
+    df_long,
+    aes(
+      x = metric,
+      y = value,
+      group = node,
+      colour = top5_OD
+    )
+  ) +
+    geom_line(alpha = 0.6) +
+    scale_colour_manual(
+      values = c("FALSE" = "grey70", "TRUE" = "red")
+    ) +
+    theme_minimal() +
+    ggtitle("Top 5% Farms Highlighted — Outdegree")
+})
+```
+```{r}
+# example
+monthly_plots_ODTOP5[[8]]
+```
+```{r}
+# make highlighted parallel plots - BETWEENNESS (with corrected zero handling)
+
+monthly_top5_BT_multi <- lapply(monthly_metrics_scaled, function(m) {
+
+  if (max(m$betweenness) == 0) {
+    m$top5_BT <- FALSE
+    return(m)
+  }
+
+  n_top <- ceiling(0.05 * nrow(m))
+
+  top_nodes <- m$node[
+    order(m$betweenness, decreasing = TRUE)[1:n_top]
+  ]
+
+  m$top5_BT <- m$node %in% top_nodes
+
+  m
+})
+```
+
+```{r}
+monthly_plots_BTTOP5 <- lapply(monthly_top5_BT_multi, function(m) {
+
+  df_long <- m |>
+    pivot_longer(
+      cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+      names_to = "metric",
+      values_to = "value"
+    )
+
+  ggplot(
+    df_long,
+    aes(
+      x = metric,
+      y = value,
+      group = node,
+      colour = top5_BT
+    )
+  ) +
+    geom_line(alpha = 0.6) +
+    scale_colour_manual(
+      values = c("FALSE" = "grey70", "TRUE" = "red")
+    ) +
+    theme_minimal() +
+    ggtitle("Top 5% Farms Highlighted — Betweenness")
+})
+```
+```{r}
+# example
+monthly_plots_BTTOP5[[3]]
+```
+
+Quantitative:
+
+```{r}
+# calculate the overlap for periods 6-12
+monthly_overlap <- lapply(6:12, function(i) {
+  
+  m <- monthly_metrics_nodes[[i]]
+  
+  # Top 5% by outdegree
+  n_top_OD <- ceiling(0.05 * nrow(m))
+  top_OD <- m[order(-m$outdegree), "node"]
+  top_OD <- top_OD[1:n_top_OD]
+  
+  # Top 5% by betweenness
+  n_top_BT <- ceiling(0.05 * nrow(m))
+  top_BT <- m[order(-m$betweenness), "node"]
+  top_BT <- top_BT[1:n_top_BT]
+  
+  # Identify overlap
+  both <- intersect(top_OD, top_BT)
+  OD_only <- setdiff(top_OD, top_BT)
+  BT_only <- setdiff(top_BT, top_OD)
+  either <- union(top_OD, top_BT)
+  
+  data.frame(
+    Period = paste0("Period_", i),
+    OD_top5 = length(top_OD),
+    BT_top5 = length(top_BT),
+    Both = length(both),
+    OD_only = length(OD_only),
+    BT_only = length(BT_only),
+    Either = length(either)
+  )
+})
+```
+```{r}
+# make it a table
+overlap_summary <- do.call(rbind, monthly_overlap)
+
+overlap_summary
+```
+```{r}
+# percentage overlap - what proportion of the farms identified by either  metric were identified by both?
+overlap_summary$Both_percent_of_either <-
+  100 * overlap_summary$Both / overlap_summary$Either
+
+overlap_summary
+```
+The same number of farms was selected for the top 5% of each metric in each period. The table shows how many farms were identified by outdegree only, betweenness only, or both measures, with these groups making up the total farms identified by either metric. Od_only & BT_only are always the same because both metrics start with the same size top 5% group and share the same number of overlapping farms - e.g. 6 identified by both; OD-only = 13-6 = 7, and the same for BT-only
+
+
+In Period 6, 6 of the 20 farms identified in the top 5% by either OD or BT were identified by both measures, while the remaining farms were identified by only one measure (OD-only or BT-only). This indicates that OD and BT captured overlapping but distinct dimensions of structural importance.
+
+results:
+
+  1. overlap table for periods 6-12: period; number of top 5% farms identified by both OD & BT; total identified by either measure; % overlap (both/eitherx 100)
+  
+  2. one representative period where the distinction between oD and BT is clear - show top 5% farms for one metric highlighted with the three standardised metrics (OD, BT, strength) - visually demonstrate that some structurally important farms have differnet profiles across the measures.
+
+Asking whether structural importance is multidimensional, rather than assuming that a farm important according to one metric is neccesarily important according to the others
+
+DO OUTDEGREE AND BETWEENNESS IDENTIFY THE SAME OR DIFFERENT STRUCTURALLY IMPORTANT FARMS - plots provide a visual check of this
+
+so do the farms identified by outdegree also have high betweenness strength, or does each metric identify different structural positions?
+
+essentially: which farms are structurally important, how persisent that importance is, and whether different centrality measures identify the same or different farms.
+
+-->
+
+RQ2 if they identify different types of farms, compare the dz sim effect of removing outdegree-important vs betweenness-important farms
+
+

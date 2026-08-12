@@ -24,21 +24,21 @@ scenario_1_results <- readRDS("scenario_1_results.rds") # baseline
 scenario_2_results <- readRDS("scenario_2_results.rds") # Outdegree (high) >= 8 months
 scenario_3_results <- readRDS("scenario_3_results.rds") # Outdegree (med) >= 6 months
 scenario_4_results <- readRDS("scenario_4_results.rds") # Outdegree any month
-scenario_5_results <- readRDS("scenario_5_results.rds") # Betweenness (high) >= 6 months
-scenario_6_results <- readRDS("scenario_6_results.rds") # Betweenness (med) >= 4 months
-scenario_7_results <- readRDS("scenario_7_results.rds") # Betweenness any month
-scenario_8_results <- readRDS("scenario_8_results.rds") # Combined (high) BT >= 6 months & OD >= 8 months
-scenario_9_results <- readRDS("scenario_9_results.rds") # Combined (med) BT>= 4 months & 0D >= 6 months
-scenario_10_results <- readRDS("scenario_10_results.rds") # Combined any month
-scenario_11_results <- readRDS("scenario_11_results.rds") # control High - random 4 farms (average of scenarios 3/6/9) = 4.33 (4)
-scenario_12_results <- readRDS("scenario_12_results.rds") # control med - random 9 farms (average of scenarios 2/5/8) = 9.33 (9)
-scenario_13_results <- readRDS("scenario_13_results.rds") # random 40 farms (average of scenarios 4/7/10) = 40.33 (40)
+scenario_5_results <- readRDS("scenario_5_results_corrected.rds") # Betweenness (high) >= 6 months
+scenario_6_results <- readRDS("scenario_6_results_corrected.rds") # Betweenness (med) >= 4 months
+scenario_7_results <- readRDS("scenario_7_results_corrected.rds") # Betweenness any month
+#scenario_8_results <- readRDS("scenario_8_results.rds") # Combined (high) BT >= 6 months & OD >= 8 months
+#scenario_9_results <- readRDS("scenario_9_results.rds") # Combined (med) BT>= 4 months & 0D >= 6 months
+#scenario_10_results <- readRDS("scenario_10_results.rds") # Combined any month
+#scenario_11_results <- readRDS("scenario_11_results.rds") # control High - random 4 farms (average of scenarios 3/6/9) = 4.33 (4)
+#scenario_12_results <- readRDS("scenario_12_results.rds") # control med - random 9 farms (average of scenarios 2/5/8) = 9.33 (9)
+#scenario_13_results <- readRDS("scenario_13_results.rds") # random 40 farms (average of scenarios 4/7/10) = 40.33 (40)
 scenario_14_results <- readRDS("scenario_14_results.rds") # OD HIGH CONTROL (5 removed)
 scenario_15_results <- readRDS("scenario_15_results.rds") # OD MED CONTROL (8 removed)
 scenario_16_results <- readRDS("scenario_16_results.rds") # OD ALL CONTROL (43 removed)
-scenario_17_results <- readRDS("scenario_17_results.rds") # BT HIGH CONTROL (6 removed)
-scenario_18_results <- readRDS("scenario_18_results.rds") # BT MED CONTROL (14 removed)
-scenario_19_results <- readRDS("scenario_19_results.rds") # BT ALL CONTROL (47 removed)
+scenario_17_results <- readRDS("scenario_17_results_corrected.rds") # BT HIGH CONTROL (1 removed)
+scenario_18_results <- readRDS("scenario_18_results_corrected.rds") # BT MED CONTROL (8 removed)
+scenario_19_results <- readRDS("scenario_19_results_corrected.rds") # BT ALL CONTROL (35 removed)
 ```
 
 ```{r}
@@ -64,12 +64,12 @@ all_scenarios <- list(
   SC5 = scenario_5_results,
   SC6 = scenario_6_results,
   SC7 = scenario_7_results,
-  SC8 = scenario_8_results,
-  SC9 = scenario_9_results,
-  SC10 = scenario_10_results,
-  SC11 = scenario_11_results,
-  SC12 = scenario_12_results,
-  SC13 = scenario_13_results,
+  #SC8 = scenario_8_results,
+  #SC9 = scenario_9_results,
+  #SC10 = scenario_10_results,
+  #SC11 = scenario_11_results,
+  #SC12 = scenario_12_results,
+  #SC13 = scenario_13_results,
   SC14 = scenario_14_results,
   SC15 = scenario_15_results,
   SC16 = scenario_16_results,
@@ -114,35 +114,38 @@ OD_high_candidates <- readRDS(
 ```
 
 ```{r}
-head(OD_all_candidates)
+OD_all_candidates
 ```
 
 ```{r}
 # BETWEENNESS
 BT_all_candidates <- readRDS(
-  "BT_any_persistent.rds"
+  "BT_any_persistent_corrected.rds"
 )
 
 BT_high_candidates <- readRDS(
-  "BT_high_persistent.rds"
+  "BT_high_persistent_corrected.rds"
 )
 
 BT_med_candidates <- readRDS(
-  "BT_med_persistent.rds"
+  "BT_med_persistent_corrected.rds"
 )
+```
+```{r}
+BT_med_candidates
 ```
 
 ```{r}
 # COMBINED BETWEENNESS & OUTDEGREE
-CB_all_candidates <- readRDS(
+#CB_all_candidates <- readRDS(
   "Combined_all_persistent.rds"
 )
 
-CB_high_candidates <- readRDS(
+#CB_high_candidates <- readRDS(
   "Combined_high_persistent.rds"
 )
 
-CB_med_candidates <- readRDS(
+#CB_med_candidates <- readRDS(
   "Combined_med_persistent.rds"
 )
 ```
@@ -176,12 +179,12 @@ scenario_table <- data.frame(
     "(5)",
     "(6)",
     "(7)",
-    "(8)",
-    "(9)",
-    "(10)",
-    "(11)",
-    "(12)",
-    "(13)",
+    #"(8)",
+    #"(9)",
+    #"(10)",
+    #"(11)",
+    #"(12)",
+    #"(13)",
     "(14)",
     "(15)",
     "(16)",
@@ -198,12 +201,12 @@ scenario_table <- data.frame(
     "Targeted Intervention",
     "Targeted Intervention",
     "Targeted Intervention",
-    "Targeted Intervention",
-    "Targeted Intervention",
-    "Targeted Intervention",
-    "Random removal control",
-    "Random removal control",
-    "Random removal control",
+    #"Targeted Intervention",
+    #"Targeted Intervention",
+    #"Targeted Intervention",
+    #"Random removal control",
+    #"Random removal control",
+    #"Random removal control",
     "CONTROL OD HIGH",
     "CONTROL OD MED",
     "CONTROL OD ALL",
@@ -220,12 +223,12 @@ scenario_table <- data.frame(
     "Betweenness",
     "Betweenness",
     "Betweenness",
-    "Combined",
-    "Combined",
-    "Combined",
-    "Random",
-    "Random",
-    "Random",
+    #"Combined",
+    #"Combined",
+   # "Combined",
+   # "Random",
+   # "Random",
+   # "Random",
     "RandomOD",
     "RandomOD",
     "RandomOD",
@@ -242,12 +245,12 @@ scenario_table <- data.frame(
     "High >=6 months",
     "Medium >=4 months",
     ">= 1 month",
-    "High BT >=6 AND OD >=8 months",
-    "Medium BT >=4 AND OD>=6 months",
-    ">=1 month",
-    "Matched to 'high' candidates",
-    "Matched to 'medium' candidates",
-    "Matched to 'all' candidates",
+   # "High BT >=6 AND OD >=8 months",
+    #"Medium BT >=4 AND OD>=6 months",
+    #">=1 month",
+   # "Matched to 'high' candidates",
+   # "Matched to 'medium' candidates",
+   # "Matched to 'all' candidates",
     "Matched to OD HIGH",
     "Matched to OD MED",
     "Matched to OD ALL",
@@ -263,18 +266,18 @@ scenario_table <- data.frame(
     length(BT_high_candidates),
     length(BT_med_candidates),
     length(BT_all_candidates),
-    length(CB_high_candidates),
-    length(CB_med_candidates),
-    length(CB_all_candidates),
-    4,
-    9,
-    40,
+    #length(CB_high_candidates),
+    #length(CB_med_candidates),
+    #length(CB_all_candidates),
+    #4,
+    #9,
+    #40,
     5,
     8,
     43,
-    6,
-    14,
-    47
+    1,
+    8,
+    35
   ),
   
   Percent_of_all_farms = c(
@@ -285,18 +288,18 @@ scenario_table <- data.frame(
     length(BT_high_candidates)/total_farms*100,
     length(BT_med_candidates)/total_farms*100,
     length(BT_all_candidates)/total_farms*100,
-    length(CB_high_candidates)/total_farms*100,
-    length(CB_med_candidates)/total_farms*100,
-    length(CB_all_candidates)/total_farms*100,
-    4/total_farms*100,
-    9/total_farms*100,
-    40/total_farms*100,
+    #length(CB_high_candidates)/total_farms*100,
+    #length(CB_med_candidates)/total_farms*100,
+    #length(CB_all_candidates)/total_farms*100,
+    #4/total_farms*100,
+    #9/total_farms*100,
+    #40/total_farms*100,
     5/total_farms*100,
     8/total_farms*100,
     43/total_farms*100,
-    6/total_farms*100,
-    14/total_farms*100,
-    47/total_farms*100
+    1/total_farms*100,
+    8/total_farms*100,
+    35/total_farms*100
   )
 )
 
@@ -413,17 +416,17 @@ removal_scenarios <- list(
   S4 = OD_all_candidates,
   S5 = BT_high_candidates,
   S6 = BT_med_candidates,
-  S7 = BT_all_candidates,
-  S8 = CB_high_candidates,
-  S9 = CB_med_candidates,
-  S10 = CB_all_candidates,
-  S11 = Control_high_random,
-  S12 = Control_medium_random,
-  S13 = Control_all_random,
-  Annual_Bt_FIVE = annual_BT_top5,
-  Annual_OD_FIVE = annual_OD_top5,
-  Annual_OD_deg = annual_OD_top5_deg
-  #SC14 = 
+  S7 = BT_all_candidates
+  #S8 = CB_high_candidates,
+  #S9 = CB_med_candidates,
+  #S10 = CB_all_candidates,
+  #S11 = Control_high_random,
+  #S12 = Control_medium_random,
+  #S13 = Control_all_random,
+  #Annual_Bt_FIVE = annual_BT_top5,
+  #Annual_OD_FIVE = annual_OD_top5,
+  #Annual_OD_deg = annual_OD_top5_deg
+  #SC14 = NEED TO ADD THESE
   #SC15 = 
   #SC16 = 
   #SC17 = 
@@ -585,13 +588,13 @@ GWCC_table <- data.frame(
     "(4)",
     "(5)",
     "(6)",
-    "(7)",
-    "(8)",
-    "(9)",
-    "(10)",
-    "(11)",
-    "(12)",
-    "(13)"
+    "(7)"
+    #"(8)",
+    #"(9)",
+    #"(10)",
+    #"(11)",
+    #"(12)",
+    #"(13)"
   ),
   
   Farms_removed = c(
@@ -601,13 +604,13 @@ GWCC_table <- data.frame(
     length(OD_all_candidates),
     length(BT_high_candidates),
     length(BT_med_candidates),
-    length(BT_all_candidates),
-    length(CB_high_candidates),
-    length(CB_med_candidates),
-    length(CB_all_candidates),
-    4,
-    9,
-    40
+    length(BT_all_candidates)
+    #length(CB_high_candidates),
+    #length(CB_med_candidates),
+    #length(CB_all_candidates),
+    #4,
+    #9,
+    #40
   ),
   
   GWCC_size_farms = c(
@@ -617,13 +620,13 @@ GWCC_table <- data.frame(
     total_farms - length(OD_all_candidates),
     total_farms - length(BT_high_candidates),
     total_farms - length(BT_med_candidates),
-    total_farms - length(BT_all_candidates),
-    total_farms - length(CB_high_candidates),
-    total_farms - length(CB_med_candidates),
-    total_farms - length(CB_all_candidates),
-    total_farms - 4,
-    total_farms - 9,
-    total_farms - 40
+    total_farms - length(BT_all_candidates)
+    #total_farms - length(CB_high_candidates),
+    #total_farms - length(CB_med_candidates),
+    #total_farms - length(CB_all_candidates),
+    #total_farms - 4,
+    #total_farms - 9,
+    #total_farms - 40
   ),
   
   GWCC_percentage_of_remaining_farms = c(# what are you calculating the percentage relative to?
@@ -755,12 +758,12 @@ summary_results_SC4 <- summary_results$SC4
 summary_results_SC5 <- summary_results$SC5
 summary_results_SC6 <- summary_results$SC6
 summary_results_SC7 <- summary_results$SC7
-summary_results_SC8 <- summary_results$SC8
-summary_results_SC9 <- summary_results$SC9
-summary_results_SC10 <- summary_results$SC10
-summary_results_SC11 <- summary_results$SC11
-summary_results_SC12 <- summary_results$SC12
-summary_results_SC13 <- summary_results$SC13
+#summary_results_SC8 <- summary_results$SC8
+#summary_results_SC9 <- summary_results$SC9
+#summary_results_SC10 <- summary_results$SC10
+#summary_results_SC11 <- summary_results$SC11
+#summary_results_SC12 <- summary_results$SC12
+#summary_results_SC13 <- summary_results$SC13
 summary_results_SC14 <- summary_results$SC14
 summary_results_SC15 <- summary_results$SC15
 summary_results_SC16 <- summary_results$SC16
@@ -1228,7 +1231,7 @@ STORY
 
 # YOU ARE HERE 8/08/26
 
-Do an overall test then a pairwise test? to match other 2 questions - depends what want to answer - doing this version would allow to answer - is OD/BT more effective
+Do an overall test then a pairwise test? to match other 2 questions - depends what want to answer - doing this version would allow to answer - is OD/BT more effective 
 
 DATA - 
 
@@ -1293,7 +1296,7 @@ plot_sizes_stats <- plot_sizes # save a copy before duplication for stat analysi
 # duplicate baseline into every intensity panel
 
 # extract baseline
-basline_sizes <- subset(plot_sizes, Scenario == "baseline")
+baseline_sizes <- subset(plot_sizes, Scenario == "baseline")
 ```
 ```{r}
 # duplicate baseline
@@ -1474,7 +1477,7 @@ Reject null hypothesis - p <0.05 - shows that at least one group differs but not
 
 DUNNS TEST - bonferroni
 ```{r}
-install.packages("FSA")
+#install.packages("FSA")
 ```
 ```{r}
 library(FSA)
@@ -1482,17 +1485,17 @@ library(FSA)
 dunnTest(
   Final_size ~ Method,
   data = plot_sizes_stats,
-  method = "bonferroni"
+ method = "bonferroni"
 )
 ```
 ```{r}
-library(rstatix)
+#library(rstatix)
 
-plot_sizes_stats %>%
-  dunn_test(
-    Final_size ~ Method,
-    p.adjust.method = "BH"
-  )
+#plot_sizes_stats %>%
+  #dunn_test(
+    #Final_size ~ Method,
+    #p.adjust.method = "BH"
+ # )
 ```
 
 Repeat by group by intensity
@@ -1591,7 +1594,7 @@ p<0.05 - reject null- at least one intervention method differs in peak infectiou
 Use post-hoc test (Dunn's test with Bonferroni correction) to identify specific differences.
 
 ```{r}
-#library(dunn.test)
+library(dunn.test)
 
 High_FS_Dunn <- dunn.test(
   x = subset(

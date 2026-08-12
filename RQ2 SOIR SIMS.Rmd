@@ -752,16 +752,19 @@ head(OD_all_candidates)
 ```{r}
 # BETWEENNESS
 BT_all_candidates <- readRDS(
-  "BT_any_persistent.rds"
-)
+  "BT_any_persistent_corrected.rds"
+) # 35 nodes
 
 BT_high_candidates <- readRDS(
-  "BT_high_persistent.rds"
-)
+  "BT_high_persistent_corrected.rds"
+) # 1 node
 
 BT_med_candidates <- readRDS(
-  "BT_med_persistent.rds"
-)
+  "BT_med_persistent_corrected.rds"
+) # 8 nodes
+```
+```{r}
+BT_all_candidates
 ```
 
 ```{r}
@@ -786,15 +789,15 @@ class(CB_high_candidates)
 
 ```{r}
 # removed lengths - these are stored as character/lists not table so length appropriate
-length(OD_all_candidates)
-length(OD_high_candidates)
-length(OD_med_candidates)
+#length(OD_all_candidates)
+#length(OD_high_candidates)
+#length(OD_med_candidates)
 length(BT_all_candidates)
 length(BT_high_candidates)
 length(BT_med_candidates)
-length(CB_all_candidates)
-length(CB_med_candidates)
-length(CB_high_candidates)
+#length(CB_all_candidates)
+#length(CB_med_candidates)
+#length(CB_high_candidates)
 ```
 Create Scenario Table
 ```{r}
@@ -883,7 +886,7 @@ N.B. hierarchal network (usualy for livestock) - until cow-calf starts to trade,
 Create new movement datasets with excluded farms
 
 ```{r}
-# baseline - no nodes removed
+# SCENARIO 1 - baseline - no nodes removed
 scenario_1 <- movements
 ```
 ```{r}
@@ -891,7 +894,7 @@ dim(scenario_1)
 length(unique(c(scenario_1$source, scenario_1$destination))) # number of nodes
 ```
 ```{r}
-# Outdegree >= 8 months
+# SCENARIO 2 - Outdegree >= 8 months
 scenario_2 <- movements %>%
   filter(
     !(source %in% OD_high_candidates),
@@ -910,7 +913,7 @@ any(OD_high_candidates %in% scenario_2$destination)
 class(scenario_2)
 ```
 ```{r}
-# Outdegree >= 6 months
+# SCENARIO 3 - Outdegree >= 6 months
 scenario_3 <- movements %>%
   filter(
     !(source %in% OD_med_candidates),
@@ -924,7 +927,7 @@ any(OD_med_candidates %in% scenario_3$destination)
 class(scenario_3)
 ```
 ```{r}
-# Outdegree any months
+# SCENARIO 4 - Outdegree any months
 scenario_4 <- movements %>%
   filter(
     !(source %in% OD_all_candidates),
@@ -938,7 +941,7 @@ any(OD_all_candidates %in% scenario_4$destination)
 class(scenario_4)
 ```
 ```{r}
-# Betweeness >= 6 months
+# SCENARIO 5 - Betweeness >= 6 months
 scenario_5 <- movements %>%
   filter(
     !(source %in% BT_high_candidates),
@@ -952,7 +955,7 @@ any(BT_high_candidates %in% scenario_5$destination)
 class(scenario_5)
 ```
 ```{r}
-# Betweeness >= 4 months
+# SCENARIO 6 - Betweeness >= 4 months
 scenario_6 <- movements %>%
   filter(
     !(source %in% BT_med_candidates),
@@ -966,7 +969,7 @@ any(BT_med_candidates %in% scenario_6$destination)
 class(scenario_6)
 ```
 ```{r}
-# Betweeness any months
+# SCENARIO 7 - Betweeness any months
 scenario_7 <- movements %>%
   filter(
     !(source %in% BT_all_candidates),
@@ -980,7 +983,7 @@ any(BT_all_candidates %in% scenario_7$destination)
 class(scenario_7)
 ```
 ```{r}
-# Combined BT >= 6 months & OD >= 8 months
+# SCENARIO 8 - Combined BT >= 6 months & OD >= 8 months
 scenario_8 <- movements %>%
   filter(
     !(source %in% CB_high_candidates),
@@ -995,7 +998,7 @@ class(scenario_8)
 length(scenario_8)
 ```
 ```{r}
-# Combined BT>= 4 months & 0D >= 6 months
+# SCENARIO 9 - Combined BT>= 4 months & 0D >= 6 months
 scenario_9 <- movements %>%
   filter(
     !(source %in% CB_med_candidates),
@@ -1010,7 +1013,7 @@ class(scenario_9)
 dim(scenario_9)
 ```
 ```{r}
-# Combined any month
+# SCENARIO 10 - Combined any month
 scenario_10 <- movements %>%
   filter(
     !(source %in% CB_all_candidates),
@@ -1026,7 +1029,7 @@ class(scenario_10)
 
 ```{r}
 # control 1 (high)
-# Scenario 11 - random removal of 4 farms
+# SCENARIO 11 - random removal of 4 farms
 
 set.seed(11) # Set random seed to ensure the same random farms can be selected in future runs.
 
@@ -1051,7 +1054,7 @@ length(unique(c(scenario_11$source, scenario_11$destination))) # number of nodes
 
 ```{r}
 # control 2 (med)
-# Scenario 12 - random removal of 9 farms
+# SCENARIO 12 - random removal of 9 farms
 
 set.seed(12) # Set random seed to ensure the same random farms can be selected in future runs.
 
@@ -1075,7 +1078,7 @@ length(unique(c(scenario_12$source, scenario_12$destination))) # number of nodes
 
 ```{r}
 # Control 3 (all)
-# Scenario 13 - random removal of 40 farms = control all
+# SCENARIO 13 - random removal of 40 farms = control all
 
 set.seed(13) # Set random seed to ensure the same random farms can be selected in future runs.
 
@@ -1101,7 +1104,7 @@ ADD CONTROLS FOR EACH SCENARIO EXCEPT COMBINED - NOT USIGN
 
 ```{r}
 # Control OD High 
-# Scenario 14 - random removal of 5 farms = control HIGH
+# SCENARIO 14 - random removal of 5 farms = control HIGH
 
 set.seed(14) # Set random seed to ensure the same random farms can be selected in future runs.
 
@@ -1121,7 +1124,7 @@ class(scenario_14)
 ```
 ```{r}
 # Control OD MED 
-# Scenario 15 - random removal of 8 farms = control MED
+# SCENARIO 15 - random removal of 8 farms = control MED
 
 set.seed(15) # Set random seed to ensure the same random farms can be selected in future runs.
 
@@ -1141,7 +1144,7 @@ class(scenario_15)
 ```
 ```{r}
 # Control OD ALL 
-# Scenario 16 - random removal of 43 farms = control all
+# SCENARIO 16 - random removal of 43 farms = control all
 
 set.seed(16) # Set random seed to ensure the same random farms can be selected in future runs.
 
@@ -1161,62 +1164,64 @@ class(scenario_16)
 ```
 ```{r}
 # Control BT HIGH 
-# Scenario 17 - random removal of 6 farms = control HIGH
+# SCENARIO 17 - random removal of 6 farms = control HIGH
 
-set.seed(170) # Set random seed to ensure the same random farms can be selected in future runs.
+set.seed(111) # Set random seed to ensure the same random farms can be selected in future runs.
 
-random_6 <- sample(all_farms, 6)
+all_farms <- unique(c(movements$source, movements$destination))
+
+random_1 <- sample(all_farms, 1)
 
 scenario_17 <- movements %>%
   filter(
-    !(source %in% random_6),
-    !(destination %in% random_6)
+    !(source %in% random_1),
+    !(destination %in% random_1)
   )
 ```
 ```{r}
 # check worked & df
-any(random_6 %in% scenario_17$source)
-any(random_6 %in% scenario_17$destination)
+any(random_1 %in% scenario_17$source)
+any(random_1 %in% scenario_17$destination)
 class(scenario_17)
 ```
 ```{r}
 # Control BT MED 
-# Scenario 18 - random removal of 14 farms = control MED
+# SCENARIO 18 - random removal of 14 farms = control MED
 
-set.seed(18) # Set random seed to ensure the same random farms can be selected in future runs.
+set.seed(118) # Set random seed to ensure the same random farms can be selected in future runs.
 
-random_14 <- sample(all_farms, 14)
+random_8 <- sample(all_farms, 18)
 
 scenario_18 <- movements %>%
   filter(
-    !(source %in% random_14),
-    !(destination %in% random_14)
+    !(source %in% random_8),
+    !(destination %in% random_8)
   )
 ```
 ```{r}
 # check worked & df
-any(random_14 %in% scenario_18$source)
-any(random_14 %in% scenario_18$destination)
+any(random_8 %in% scenario_18$source)
+any(random_8 %in% scenario_18$destination)
 class(scenario_18)
 ```
 ```{r}
 # Control BT ALL 
-# Scenario 19 - random removal of 47 farms = control all
+# SCENARIO 19 - random removal of 47 farms = control all
 
-set.seed(19) # Set random seed to ensure the same random farms can be selected in future runs.
+set.seed(119) # Set random seed to ensure the same random farms can be selected in future runs.
 
-random_47 <- sample(all_farms, 47)
+random_35 <- sample(all_farms, 35)
 
 scenario_19 <- movements %>%
   filter(
-    !(source %in% random_47),
-    !(destination %in% random_47)
+    !(source %in% random_35),
+    !(destination %in% random_35)
   )
 ```
 ```{r}
 # check worked & df
-any(random_47 %in% scenario_19$source)
-any(random_47 %in% scenario_19$destination)
+any(random_35 %in% scenario_19$source)
+any(random_35 %in% scenario_19$destination)
 class(scenario_19)
 ```
 
@@ -1491,8 +1496,9 @@ scenario_5_results <- pblapply(
     )
   }
 )
-
-saveRDS(scenario_5_results, "scenario_5_results.rds")
+```
+```{r}
+saveRDS(scenario_5_results, "scenario_5_results_corrected.rds")
 ```
 
 
@@ -1528,7 +1534,7 @@ scenario_6_results <- pblapply(
   }
 )
 
-saveRDS(scenario_6_results, "scenario_6_results.rds")
+saveRDS(scenario_6_results, "scenario_6_results_corrected.rds")
 ```
 
 
@@ -1563,8 +1569,9 @@ scenario_7_results <- pblapply(
     )
   }
 )
-
-saveRDS(scenario_7_results, "scenario_7_results.rds")
+```
+```{r}
+saveRDS(scenario_7_results, "scenario_7_results_corrected.rds")
 ```
 
 
@@ -1598,7 +1605,8 @@ scenario_8_results <- pblapply(
     )
   }
 )
-
+```
+```{r}
 saveRDS(scenario_8_results, "scenario_8_results.rds")
 ```
 
@@ -1836,8 +1844,9 @@ scenario_17_results <- pblapply(
     )
   }
 )
-
-saveRDS(scenario_17_results, "scenario_17_results.rds")
+```
+```{r}
+saveRDS(scenario_17_results, "scenario_17_results_corrected.rds")
 ```
 # Scenario 18
 ```{r}
@@ -1852,8 +1861,9 @@ scenario_18_results <- pblapply(
     )
   }
 )
-
-saveRDS(scenario_18_results, "scenario_18_results.rds")
+```
+```{r}
+saveRDS(scenario_18_results, "scenario_18_results_corrected.rds")
 ```
 # Scenario 19
 ```{r}
@@ -1868,8 +1878,9 @@ scenario_19_results <- pblapply(
     )
   }
 )
-
-saveRDS(scenario_19_results, "scenario_19_results.rds")
+```
+```{r}
+saveRDS(scenario_19_results, "scenario_19_results_corrected.rds")
 ```
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
