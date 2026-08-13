@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
 ```{r}
 # LIBRARIES
 library(dplyr)
@@ -16,7 +17,11 @@ library(igraph)
 library(randomcoloR)
 library(ggplot2)
 library(tidyr)
+library(gt)
+library(patchwork)
 ```
+
+https://link.springer.com/content/pdf/10.1007/s11274-025-04755-3.pdf
 
 # Network construction and overall structure
 
@@ -242,6 +247,115 @@ monthly_network_summary <- do.call(
 ```{r}
 monthly_network_summary
 ```
+```{r}
+# AI how do i turn this table into a png/pdf to export?
+
+network_table <- monthly_network_summary |>
+  gt() |>
+  cols_label(
+    Period = "Observation period",
+    total_edges = "Total edges",
+    total_nodes = "Total nodes",
+    largest_component = "Largest weakly connected component",
+    density = "Network density",
+    diameter = "Network diameter"
+  ) |>
+  fmt_number(
+    columns = density,
+    decimals = 3
+  )
+
+gtsave(
+  network_table,
+  "network_characteristics.html"
+)
+```
+
+```{r}
+# AI prompt - how to turn this into 5 separate line plots in one panel with matching headers/axis labels to metric
+# plot variation over 12 periods
+png(
+  "network_metrics_12_periods.png",
+  width = 3000,
+  height = 2400,
+  res = 300
+)
+
+par(
+  mfrow = c(3, 3),
+  mar = c(4, 4, 3, 1)
+)
+
+# Plot 1: Total nodes
+plot(
+  1:12,
+  monthly_network_summary$total_nodes,
+  type = "o",
+  pch = 16,
+  xlab = "Period",
+  ylab = "Number of nodes",
+  main = "Total nodes",
+  xaxt = "n"
+)
+axis(1, at = 1:12, labels = 1:12)
+
+# Plot 2: Total edges
+plot(
+  1:12,
+  monthly_network_summary$total_edges,
+  type = "o",
+  pch = 16,
+  xlab = "Period",
+  ylab = "Number of edges",
+  main = "Total edges",
+  xaxt = "n"
+)
+axis(1, at = 1:12, labels = 1:12)
+
+# Plot 3: Largest weakly connected component
+plot(
+  1:12,
+  monthly_network_summary$largest_component,
+  type = "o",
+  pch = 16,
+  xlab = "Period",
+  ylab = "Number of nodes",
+  main = "Largest weakly connected component",
+  xaxt = "n"
+)
+axis(1, at = 1:12, labels = 1:12)
+
+# Plot 4: Density
+plot(
+  1:12,
+  monthly_network_summary$density,
+  type = "o",
+  pch = 16,
+  xlab = "Period",
+  ylab = "Density",
+  main = "Network density",
+  xaxt = "n"
+)
+axis(1, at = 1:12, labels = 1:12)
+
+# Plot 5: Diameter
+plot(
+  1:12,
+  monthly_network_summary$diameter,
+  type = "o",
+  pch = 16,
+  xlab = "Period",
+  ylab = "Diameter",
+  main = "Network diameter",
+  xaxt = "n"
+)
+axis(1, at = 1:12, labels = 1:12)
+
+dev.off()
+
+par(mfrow = c(1, 1))
+```
+
 REF - network analysis descriptive review paper
 
 1. Network Density (0-1) = proportion of possible edges that actually exist (equation for this). high = many connected farms = infection spreads easily
@@ -279,11 +393,11 @@ monthly_node_summary <- do.call(
       
       median_strength_out = median(m$strength_out),
       max_strength_out = max(m$strength_out),
-      stength_out_95th = quantile(m$strength_out, 0.95),
+      strength_out_95th = quantile(m$strength_out, 0.95),
       
       median_betweenness = median(m$betweenness),
       max_betweenness = max(m$betweenness),
-      betweenness_95th = quantile(m$betwenness_out, 0.95)
+      betweenness_95th = quantile(m$betweenness_out, 0.95)
     )
   })
 )
@@ -291,7 +405,290 @@ monthly_node_summary <- do.call(
 ```{r}
 monthly_node_summary
 ```
+```{r}
+# AI prompt - i want to turn the monthly node summary into 3 panels of 12 box plots to show the distribution of node metrics. I want clear labeling, legends, and titles
 
+# this uses the raw values
+
+# combine 12 periods into one dataframe
+monthly_node_data <- do.call(
+  rbind,
+  lapply(seq_along(monthly_metrics_nodes), function(i) {
+    
+    m <- monthly_metrics_nodes[[i]]
+    
+    data.frame(
+      Period = i,
+      node = m$node,
+      outdegree = m$outdegree,
+      strength_out = m$strength_out,
+      betweenness = m$betweenness
+    )
+  })
+)
+```
+```{r}
+# plot, using log of y-axis because highly right skewed and compresses boxes
+par(mfrow = c(1, 3))
+
+
+# Out-degree
+boxplot(
+  outdegree ~ Period,
+  data = monthly_node_data,
+  xlab = "Period",
+  ylab = "Out-degree",
+  main = "Out-degree",
+  col = "forestgreen"
+)
+
+# Out-strength
+boxplot(
+  strength_out ~ Period,
+  data = monthly_node_data,
+  xlab = "Period",
+  ylab = "Out-strength",
+  main = "Out-strength",
+  col = "forestgreen"
+)
+
+# Betweenness
+boxplot(
+  betweenness ~ Period,
+  data = monthly_node_data,
+  xlab = "Period",
+  ylab = "Betweenness centrality",
+  main = "Betweenness centrality",
+  col = "forestgreen"
+)
+
+par(mfrow = c(1, 1))
+```
+
+restrick y-axis to 95th percentile - not helpful as majority of boxes are 
+
+```{r}
+# jittered plot including median
+ggplot(monthly_node_data, aes(
+  x = factor(Period),
+  y = outdegree
+)) +
+  geom_jitter(
+    width = 0.2,
+    alpha = 0.12,
+    size = 1
+  ) +
+  stat_summary(
+    fun = median,
+    geom = "point",
+    size = 3,
+    colour = "red"
+  ) +
+  labs(
+    x = "Period",
+    y = "Out-degree"
+  ) +
+  theme_classic()
+```
+```{r}
+# how many farms have zero/very low values
+monthly_node_data %>%
+  group_by(Period) %>%
+  summarise(
+    n = n(),
+    zero_outdegree = sum(outdegree == 0),
+    median_outdegree = median(outdegree),
+    max_outdegree = max(outdegree)
+  )
+```
+
+3 panel figure showing distributional summaries - plot median/75th& 95th percentile, maximum over 12 periods. 95th percentile will show if the upper tail changes over time
+
+```{r}
+node_distribution_summary <- monthly_node_data %>%
+  group_by(Period) %>%
+  summarise(
+    outdegree_median = median(outdegree),
+    outdegree_75 = quantile(outdegree, 0.75),
+    outdegree_95 = quantile(outdegree, 0.95),
+    outdegree_max = max(outdegree),
+
+    strength_median = median(strength_out),
+    strength_75 = quantile(strength_out, 0.75),
+    strength_95 = quantile(strength_out, 0.95),
+    strength_max = max(strength_out),
+
+    betweenness_median = median(betweenness),
+    betweenness_75 = quantile(betweenness, 0.75),
+    betweenness_95 = quantile(betweenness, 0.95),
+    betweenness_max = max(betweenness)
+  )
+```
+```{r}
+node_distribution_summary
+```
+```{r}
+# reshape summary data
+# Out-degree
+outdegree_plot_data <- node_distribution_summary %>%
+  select(
+    Period,
+    median = outdegree_median,
+    `75th percentile` = outdegree_75,
+    `95th percentile` = outdegree_95,
+    maximum = outdegree_max
+  ) %>%
+  pivot_longer(
+    cols = -Period,
+    names_to = "Statistic",
+    values_to = "Value"
+  )
+```
+```{r}
+# plot outdegree - shows typical farm (median), upper middle distribution (75th) and upper tail (95th)
+ggplot(
+  outdegree_plot_data,
+  aes(x = Period, y = Value, colour = Statistic)
+) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 1:12) +
+  labs(
+    x = "Period",
+    y = "Out-degree",
+    colour = NULL
+  ) +
+  theme_classic()
+```
+
+?remove maximum - could be highly skewed by one farm in the period
+
+```{r}
+# Reshape the three metrics into long format
+node_distribution_long <- node_distribution_summary %>%
+  select(
+    Period,
+    
+    # Out-degree
+    outdegree_median,
+    outdegree_75,
+    outdegree_95,
+    
+    # Out-strength
+    strength_median,
+    strength_75,
+    strength_95,
+    
+    # Betweenness
+    betweenness_median,
+    betweenness_75,
+    betweenness_95
+  ) %>%
+  pivot_longer(
+    cols = -Period,
+    names_to = c("Metric", "Statistic"),
+    names_pattern = "(.*)_(median|75|95)$",
+    values_to = "Value"
+  )
+```
+```{r}
+ggplot(
+  node_distribution_long,
+  aes(
+    x = Period,
+    y = Value,
+    colour = Statistic,
+    linetype = Statistic,
+    group = Statistic
+  )
+) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2) +
+  
+  facet_wrap(
+    ~ Metric,
+    ncol = 3,
+    scales = "free_y",
+    labeller = labeller(
+      Metric = c(
+        outdegree = "Out-degree",
+        strength = "Out-strength",
+        betweenness = "Betweenness centrality"
+      )
+    )
+  ) +
+  
+  scale_x_continuous(
+    breaks = 1:12
+  ) +
+  
+  scale_colour_manual(
+    values = c(
+      median = "red",
+      `75` = "forestgreen",
+      `95` = "blue"
+    ),
+    labels = c(
+      median = "Median",
+      `75` = "75th percentile",
+      `95` = "95th percentile"
+    )
+  ) +
+  
+  scale_linetype_manual(
+    values = c(
+      median = "solid",
+      `75` = "dashed",
+      `95` = "solid"
+    ),
+    labels = c(
+      median = "Median",
+      `75` = "75th percentile",
+      `95` = "95th percentile"
+    )
+  ) +
+  
+  labs(
+    x = "Period",
+    y = NULL,
+    colour = NULL,
+    linetype = NULL
+  ) +
+  
+  theme_classic() +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+```
+```{r}
+# check in degree to see why do many farms without outward movement included
+monthly_inout <- lapply(monthly_graphs, function(g) {
+  data.frame(
+    node = V(g)$name,
+    indegree = degree(g, mode = "in"),
+    outdegree = degree(g, mode = "out")
+  )
+})
+```
+```{r}
+monthly_inout
+```
+```{r}
+sapply(monthly_inout, function(m) {
+  sum(m$indegree >= 1 & m$outdegree == 0)
+})
+```
+```{r}
+# identical in terms of which farms are zero
+monthly_node_data %>%
+  summarise(
+    same = all(
+      (outdegree == 0) == (strength_out == 0)
+    )
+  )
+```
 # Identify structurally important farms
 
 OUTDEGREE
@@ -353,6 +750,48 @@ barplots_outdeg <- lapply(seq_along(monthly_metrics), function(i) {
   )
 })
 ```
+```{r}
+# AI prompt - these are my top 5% plots for outdegree - give me code to display in a panel of (3,4), maintaining the axis labels per plot
+
+png( # gets around plot to large issue - save directly
+  "top5_outdegree_12_periods.png",
+  width = 3600,
+  height = 2400,
+  res = 300
+)
+
+par(mfrow = c(3, 4),
+    mar = c(5, 4.1, 3, 0.5)
+    #oma = c(0,0,1,0)
+)
+
+for (i in seq_along(monthly_metrics)) {
+  
+  m <- monthly_metrics[[i]]
+  
+  n_top <- ceiling(0.05 * nrow(m))
+  
+  top_DO <- m[order(-m$outdegree), ][1:n_top, ]
+  top_DO <- top_DO[order(-top_DO$outdegree), ]
+  
+  barplot(
+    top_DO$outdegree,
+    names.arg = top_DO$node,
+    las = 2,
+    col = node_cols[top_DO$node],
+    main = paste("Period", i),
+    ylab = "Outdegree",
+    xlab = "Farm ID",
+    cex.names = 0.7, # farm id labels
+    cex.axis = 0.8, # y-axis numbers
+    cex.lab = 1.0, # x/y axis labels
+    cex.main = 1.2 # period titles
+  )
+}
+dev.off()
+# reset plotting layout afterwards
+par(mfrow = c(1, 1))
+```
 As a table:
 ```{r}
 # create peiods top 5% table
@@ -391,14 +830,24 @@ persistence_distribution
 ```{r}
 # persistence plot - in how many of the 12 periods does each farm appear in the top 5%
 
+png(
+  "outdegree_persistence.png",
+  width = 3000,
+  height = 2000,
+  res = 300
+)
+
 barplot(
   counts_sorted,
   las = 2,
-  cex.names = 0.4,
+  cex.names = 1.0, # farm IDs
   col = "forestgreen",
   main = "Outdegree Persistence",
-  ylab = "No. of Periods Appear in Top 5%",
-  xlab = "Farm ID"
+  ylab = "Periods in Top 5%",
+  xlab = "Farm ID",
+  cex.lab = 1.4,# x & y axis labels
+  cex.main = 3, # title
+  cex.axis = 1 # numbers on y axis
 )
 ```
 e.g. a farm appearing in 1 period = highly transient/volatile
@@ -420,6 +869,7 @@ ggplot(persistence_df, aes(x = months, y = farms)) +
   ) +
   theme_classic()
 ```
+^^^ do you want this in final writeup?
 
 Create lists for scenarios in RQ2
 ```{r}
@@ -531,6 +981,49 @@ barplots_betw <- lapply(seq_along(monthly_metrics), function(i) {
   )
 })
 ```
+```{r}
+png(
+  "top5_betweenness_periods6-12.png",
+  width = 3600,
+  height = 2400,
+  res = 300
+)
+
+par(
+  mfrow = c(2, 4),
+  mar = c(5, 4.1, 3, 0.5)
+)
+
+
+for (i in 6:12) {
+
+  m <- monthly_metrics[[i]]
+
+  n_top <- ceiling(0.05 * nrow(m))
+
+  # Order by betweenness (descending)
+  top_BW <- m[order(-m$betweenness), ][1:n_top, ]
+  top_BW <- top_BW[order(-top_BW$betweenness), ]
+
+  barplot(
+    top_BW$betweenness,
+    names.arg = top_BW$node,
+    las = 2,
+    col = node_cols[top_BW$node],
+    main = paste("Period", i),
+    ylab = "Betweenness",
+    xlab = "Farm ID",
+    cex.names = 0.7,
+    cex.axis = 0.8,
+    cex.lab = 1.0,
+    cex.main = 1.2
+  )
+}
+
+dev.off()
+
+par(mfrow = c(1, 1))
+```
 
 Code here corrected to remove false top 5% farms that were generated in first 5 months when there is no betweenness - for original code & debugs see RQ1 notebook
 ```{r}
@@ -584,6 +1077,30 @@ barplot(
   main = "Farm Persistence in Top 5% Betweeness",
   ylab = "Number of Periods Appearing in Top 5%",
   xlab = "Farm ID"
+)
+
+```
+```{r}
+# persistence plot - in how many of the 12 periods does each farm appear in the top 5% for months 6-12 when BT present
+
+png(
+  "betweenness_persistence.png",
+  width = 3000,
+  height = 2000,
+  res = 300
+)
+
+barplot(
+  counts_BT_sorted2,
+  las = 2,
+  cex.names = 1.0, # farm IDs
+  col = "forestgreen",
+  main = "Betweenness Persistence",
+  ylab = "Periods in Top 5%",
+  xlab = "Farm ID",
+  cex.lab = 1.4,# x & y axis labels
+  cex.main = 3, # title
+  cex.axis = 1 # numbers on y axis
 )
 ```
 ```{r}
@@ -661,8 +1178,12 @@ parallel-coordinate plots
 examine how farms identified by each metric behave across the other metrics
 demonstrate that structural importannce is multidimensional
 
+https://search.r-project.org/CRAN/refmans/GGally/html/ggparcoord.html
+https://search.r-project.org/CRAN/refmans/lehuynh/html/MinMaxScaling.html
+file:///C:/Users/errai/Downloads/Visual_analysis_of_network_centralities.pdf & https://www.researchgate.net/publication/221536310_Visual_analysis_of_network_centralities (webpage)
+
 ```{r}
-# standardise the three node-level metrics
+# standardise the three node-level metrics - min-max scaling within each obs period
 monthly_metrics_scaled <- lapply(monthly_metrics_nodes, function(m) {
 
   m$outdeg_scaled <- (m$outdegree - min(m$outdegree)) /
@@ -754,6 +1275,120 @@ monthly_plots_ODTOP5 <- lapply(monthly_top5_OD_multi, function(m) {
 monthly_plots_ODTOP5[[8]]
 ```
 ```{r}
+# AI prompt: this is my code to make the outdegree upper 5% highlighted plots - give me the r code to put periods 6-12 in one panel
+# make panel of periods 6-12
+
+png(
+  "parallel_outdegree_top5_periods6-12.png",
+  width = 4200,
+  height = 2600,
+  res = 300
+)
+
+OD_top5_panel <- wrap_plots(
+  monthly_plots_ODTOP5[6:12],
+  ncol = 4
+)
+
+OD_top5_panel
+
+dev.off()
+```
+```{r}
+# Highlighted parallel plots - OUTDEGREE - recreate for panel plot
+
+monthly_plots_ODTOP5 <- lapply(
+  seq_along(monthly_top5_OD_multi),
+  function(i) {
+    
+    m <- monthly_top5_OD_multi[[i]]
+    
+    df_long <- m |>
+      pivot_longer(
+        cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+        names_to = "metric",
+        values_to = "value"
+      ) |>
+      mutate(
+        metric = recode(
+          metric,
+          outdeg_scaled = "Outdegree",
+          strength_scaled = "Out-strength",
+          betweenness_scaled = "Betweenness"
+        )
+      )
+    
+    ggplot(
+      df_long,
+      aes(
+        x = metric,
+        y = value,
+        group = node,
+        colour = top5_OD
+      )
+    ) +
+      geom_line(alpha = 0.6, linewidth = 0.5) +
+      
+      scale_colour_manual(
+        values = c(
+          "FALSE" = "grey75",
+          "TRUE" = "forestgreen"
+        ),
+        guide = "none"
+      ) +
+      
+      scale_y_continuous(
+        limits = c(0, 1),
+        expand = c(0, 0.03)
+      ) +
+      
+      labs(
+        title = paste("Period", i),
+        x = NULL,
+        y = "Scaled value"
+      ) +
+      
+      theme_minimal() +
+      theme(
+        plot.title = element_text(
+          size = 11,
+          hjust = 0.5
+        ),
+        axis.text.x = element_text(
+          size = 12
+        ),
+        axis.text.y = element_text(
+          size = 12
+        ),
+        axis.title.y = element_text(
+          size = 12
+        ),
+        panel.grid.minor = element_blank(),
+        legend.position = "none"
+      )
+  }
+)
+```
+```{r}
+# save just 6:12
+png(
+  "parallel_outdegree_top5_periods6-12.png",
+  width = 3600,
+  height = 4200,
+  res = 300
+)
+
+OD_top5_panel <- wrap_plots(
+  monthly_plots_ODTOP5[6:12],
+  ncol = 2
+)
+
+OD_top5_panel
+
+dev.off()
+```
+
+```{r}
 # make highlighted parallel plots - BETWEENNESS (with corrected zero handling)
 
 monthly_top5_BT_multi <- lapply(monthly_metrics_scaled, function(m) {
@@ -804,7 +1439,94 @@ monthly_plots_BTTOP5 <- lapply(monthly_top5_BT_multi, function(m) {
 ```
 ```{r}
 # example
-monthly_plots_BTTOP5[[3]]
+monthly_plots_BTTOP5[[6]]
+```
+```{r}
+# AI use to make panel plots as per out-degree
+
+# recreate betweenness plots with larger labels
+
+monthly_plots_BTTOP5 <- lapply(
+  seq_along(monthly_top5_BT_multi),
+  function(i) {
+    
+    m <- monthly_top5_BT_multi[[i]]
+    
+    df_long <- m |>
+      pivot_longer(
+        cols = c(outdeg_scaled, strength_scaled, betweenness_scaled),
+        names_to = "metric",
+        values_to = "value"
+      ) |>
+      mutate(
+        metric = recode(
+          metric,
+          outdeg_scaled = "Outdegree",
+          strength_scaled = "Out-strength",
+          betweenness_scaled = "Betweenness"
+        )
+      )
+    
+    ggplot(
+      df_long,
+      aes(
+        x = metric,
+        y = value,
+        group = node,
+        colour = top5_BT
+      )
+    ) +
+      geom_line(alpha = 0.6, linewidth = 0.5) +
+      
+      scale_colour_manual(
+        values = c(
+          "FALSE" = "grey70",
+          "TRUE" = "forestgreen"
+        ),
+        guide = "none"
+      ) +
+      
+      scale_y_continuous(
+        limits = c(0, 1),
+        expand = c(0, 0.03)
+      ) +
+      
+      labs(
+        title = paste("Period", i),
+        x = NULL,
+        y = "Scaled value"
+      ) +
+      
+      theme_minimal() +
+      theme(
+        plot.title = element_text(size = 11, hjust = 0.5),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 10),
+        axis.title.y = element_text(size = 12),
+        panel.grid.minor = element_blank()
+      )
+  }
+)
+```
+
+```{r}
+# put periods 6-12 in panel
+
+png(
+  "parallel_betweenness_top5_periods6-12.png",
+  width = 3600,
+  height = 4200,
+  res = 300
+)
+
+BT_top5_panel <- wrap_plots(
+  monthly_plots_BTTOP5[6:12],
+  ncol = 2
+)
+
+BT_top5_panel
+
+dev.off()
 ```
 
 Quantitative:
@@ -854,6 +1576,21 @@ overlap_summary$Both_percent_of_either <-
   100 * overlap_summary$Both / overlap_summary$Either
 
 overlap_summary
+```
+```{r}
+# outdegree unique farms
+top5_outdegree_farms <- unique(unlist(
+  lapply(monthly_metrics, function(m) {
+    
+    n_top <- ceiling(0.05 * nrow(m))
+    
+    top_DO <- m[order(-m$outdegree), ][1:n_top, ]
+    
+    top_DO$node
+  })
+))
+
+length(top5_outdegree_farms)
 ```
 The same number of farms was selected for the top 5% of each metric in each period. The table shows how many farms were identified by outdegree only, betweenness only, or both measures, with these groups making up the total farms identified by either metric. Od_only & BT_only are always the same because both metrics start with the same size top 5% group and share the same number of overlapping farms - e.g. 6 identified by both; OD-only = 13-6 = 7, and the same for BT-only
 
