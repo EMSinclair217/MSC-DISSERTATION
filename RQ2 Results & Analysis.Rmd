@@ -305,6 +305,9 @@ scenario_table <- data.frame(
 
 scenario_table
 ```
+```{r}
+total_farms
+```
 # 2. show change in largest connected component - GWCC - show removal of potential transmission pathways (undirected) - did removal change the movement network
 Table and figure (x-axis: scenario; y_axis: GWCC size (% of farms)) - bars/points
 
@@ -1500,6 +1503,7 @@ dunnTest(
 
 Repeat by group by intensity
 ```{r}
+# KRUSKAL WALLICS FOR FINAL SIZE
 High <- kruskal.test(
   Final_size ~ Method,
   data = subset(plot_sizes_stats, Intensity == "High")
@@ -1621,6 +1625,23 @@ High_FS_Dunn_table <- data.frame(
 
 High_FS_Dunn_table
 ```
+```{r}
+High_FS_Dunn_filtered_table <- data.frame(
+  Comparison = High_FS_Dunn$comparisons,
+  P_adjusted = round(High_FS_Dunn$P.adjusted, 10)
+)
+
+High_FS_Dunn_filtered_table <- High_FS_Dunn_filtered_table[
+  High_FS_Dunn_filtered_table$Comparison %in% c(
+    "Control (OD matched) - Out-degree",
+    "Control (BT matched) - Betweenness",
+    "Out-degree - Baseline",
+    "Betweenness - Baseline"
+  ),
+]
+
+High_FS_Dunn_filtered_table
+```
 
 Dunn’s post-hoc test shows that final outbreak size differed significantly between several methods. Out-degree removal produced significantly smaller outbreaks than its matched control and baseline, while betweenness removal significantly reduced outbreak size compared with baseline but not its matched control. Both matched controls also differed significantly from baseline, suggesting that farm removal itself contributed to reductions in outbreak size.
 
@@ -1678,6 +1699,23 @@ Med_FS_Dunn_table <- data.frame(
 )
 
 Med_FS_Dunn_table
+```
+```{r}
+Med_FS_Dunn_filtered_table <- data.frame(
+  Comparison = Med_FS_Dunn$comparisons,
+  P_adjusted = round(Med_FS_Dunn$P.adjusted, 7)
+)
+
+Med_FS_Dunn_filtered_table <- Med_FS_Dunn_filtered_table[
+  Med_FS_Dunn_filtered_table$Comparison %in% c(
+    "Control (OD matched) - Out-degree",
+    "Control (BT matched) - Betweenness",
+    "Out-degree - Baseline",
+    "Betweenness - Baseline"
+  ),
+]
+
+Med_FS_Dunn_filtered_table
 ```
 1. de
 

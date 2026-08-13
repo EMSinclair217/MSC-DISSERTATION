@@ -405,91 +405,10 @@ monthly_node_summary <- do.call(
 ```{r}
 monthly_node_summary
 ```
-```{r}
-# AI prompt - i want to turn the monthly node summary into 3 panels of 12 box plots to show the distribution of node metrics. I want clear labeling, legends, and titles
-
-# this uses the raw values
-
-# combine 12 periods into one dataframe
-monthly_node_data <- do.call(
-  rbind,
-  lapply(seq_along(monthly_metrics_nodes), function(i) {
-    
-    m <- monthly_metrics_nodes[[i]]
-    
-    data.frame(
-      Period = i,
-      node = m$node,
-      outdegree = m$outdegree,
-      strength_out = m$strength_out,
-      betweenness = m$betweenness
-    )
-  })
-)
-```
-```{r}
-# plot, using log of y-axis because highly right skewed and compresses boxes
-par(mfrow = c(1, 3))
 
 
-# Out-degree
-boxplot(
-  outdegree ~ Period,
-  data = monthly_node_data,
-  xlab = "Period",
-  ylab = "Out-degree",
-  main = "Out-degree",
-  col = "forestgreen"
-)
 
-# Out-strength
-boxplot(
-  strength_out ~ Period,
-  data = monthly_node_data,
-  xlab = "Period",
-  ylab = "Out-strength",
-  main = "Out-strength",
-  col = "forestgreen"
-)
 
-# Betweenness
-boxplot(
-  betweenness ~ Period,
-  data = monthly_node_data,
-  xlab = "Period",
-  ylab = "Betweenness centrality",
-  main = "Betweenness centrality",
-  col = "forestgreen"
-)
-
-par(mfrow = c(1, 1))
-```
-
-restrick y-axis to 95th percentile - not helpful as majority of boxes are 
-
-```{r}
-# jittered plot including median
-ggplot(monthly_node_data, aes(
-  x = factor(Period),
-  y = outdegree
-)) +
-  geom_jitter(
-    width = 0.2,
-    alpha = 0.12,
-    size = 1
-  ) +
-  stat_summary(
-    fun = median,
-    geom = "point",
-    size = 3,
-    colour = "red"
-  ) +
-  labs(
-    x = "Period",
-    y = "Out-degree"
-  ) +
-  theme_classic()
-```
 ```{r}
 # how many farms have zero/very low values
 monthly_node_data %>%

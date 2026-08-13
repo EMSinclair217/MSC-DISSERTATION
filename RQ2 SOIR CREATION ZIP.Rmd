@@ -1,0 +1,561 @@
+---
+title: "RQ2 SOIR SIMS ZIP"
+author: "ESINCLAIR"
+date: "2026-08-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# import libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(pbapply)
+```
+(original notebook = TEST SIM 2 (initial gen model))
+
+PROMPT (ChatGPT)
+show me basic complete R code for an SEIR model that tracks btb-like disease spread across nodes (farms). each movement event has a total_cattle batch size. Each farm can send or recieve several batches of cattle per day. I want to be able to seed an infection in a node an view the potential disease spread. I want to be able to remove certain  nodes  identified as superspreaders and compare simulation outcomes. Possibly in the future, I would like to compute probabiltiy of tranmission to be weighted by number of cattle
+
+```{r}
+# This is base model function from gpt prompt - a SEIR compartment stochastic model - farm level rather than animal level (issues with Movenet/DigiVet)
+
+# Everything in this block is inside the run_seir function
+# takes input:
+  # movement data (movements) and a 
+  # starting infected farm (seed_farm)
+  # transmission probability (beta) 
+  # latent_period - time between becoming infected and infectious - in compartment 'E' - incubating but CANNOT yet infect other farms through  movements - (?make latency move with animal - realistic infection developing further down contact chain?)
+  # infectious period - time spent infectious and capable of transmitting infection before moving into R (removed) - model assumption based on time to detect infected farm. During these 80d - movements from the farm can transmit infection according to beta
+
+run_seir <- function(
+    movements,
+    seed_farm,
+    beta = 0.05, 
+    latent_period = 60, 
+    infectious_period = 180 
+){
+
+
+# Overall timeline if a susceptible farm becomes infected on day 100: 0-99d = susceptible, can't infect others; 100-159d = exposed, can't infect others, 160-339d = infectious, can infect others, 340d onwards = removed, cant infect others
+
+# Build lookup table - pulls every unique farm ID from both the source and destination columns of movements  - combines, removes duplicates, sorts --> (farms) is a clean lookup table of all farms involved in the dataset
+  
+  farms <- sort(unique(c(
+    movements$source,
+    movements$destination
+  )))
+  
+# creates a numeric index for the farms, labels each with a number corresponding to the farm ID
+  n_farms <- length(farms)
+
+  farm_index <- seq_len(n_farms)
+  names(farm_index) <- farms
+
+ 
+# Convert movements to integer indices #
+
+  movements$source_id <- farm_index[movements$source]
+  movements$dest_id   <- farm_index[movements$destination]
+
+  
+# Disease state definitions:
+  
+  # 0 = S = susceptible
+  # 1 = E = exposed
+  # 2 = I = infectious
+  # 3 = R = removed
+
+# set up vectors to track each farms disease status and how long it has been in its current state
+  
+  state <- integer(n_farms) # creates a vector of zeros - meaning all farms start susceptible
+
+  days <- integer(n_farms) # creates a parallel vector to count how many days each farm has spent in its current state
+
+ 
+# Seed infection - infect chosen seed farm by setting its state to 2(I)
+
+  state[farm_index[seed_farm]] <- 2
+
+
+# Storage - prepares storage for the simulation results
+
+  max_day <- max(movements$day) # finds last day in the movement dataset
+
+# History - creates a data frame with one row per day, and columns for the number of farms in each SEIR state, all columns are pre-allocated as integer vectors of length max_day for filling during the simulation
+  
+  history <- data.frame( 
+    day = integer(max_day), 
+    S = integer(max_day),
+    E = integer(max_day),
+    I = integer(max_day),
+    R = integer(max_day)
+  )
+  
+
+
+# Simulation - advances farms through the E -> I -> R stages as each day of the simulation passes
+
+# the 'for' loop runs one iteration per day
+
+  for(day in seq_len(max_day)){
+
+ 
+# Progress exposed farms:
+ 
+# the day counters increase, and farms that have spent more than latent_period days in E become infectious (state == 2) and their day counters reset
+    
+    exposed <- which(state == 1)
+
+    if(length(exposed) > 0){
+
+      days[exposed] <- days[exposed] + 1
+
+      become_I <- exposed[
+        days[exposed] >= latent_period
+      ]
+
+      state[become_I] <- 2
+      days[become_I] <- 0
+
+    }
+
+
+# Progress infectious farms
+
+    infectious <- which(state == 2)
+
+# Their day counters increase, any farms that have spent more than infectious_period i days in I become removed (state == 3) and their day counters reset    
+    
+    if(length(infectious) > 0){
+
+      days[infectious] <- days[infectious] + 1
+
+      become_R <- infectious[
+        days[infectious] >= infectious_period
+      ]
+
+      state[become_R] <- 3
+      days[become_R] <- 0
+
+    }
+
+
+# Today's movements - filters the 'movements' data frame to keep just the rows where 'day' matches the current loop day, giving the set of movements to process for that day.
+
+    todays <- movements[movements$day == day, ]
+
+
+# Replay movement events - processes each movement and applies infection-spread rules.
+# loop over all movements happening today, for each movement, get the source and destination farm indices; skip the movement if the source is not infectious (state != 2); skip the movement if the destination is not susceptible (state != 0). Only movements from the infectious -> susceptible farms proceed to the transmission step that follows
+    
+
+    if(nrow(todays) > 0){
+
+      for(i in seq_len(nrow(todays))){
+
+        source <- todays$source_id[i]
+        dest   <- todays$dest_id[i]
+
+        # source not infectious
+        if(state[source] != 2)
+          next
+
+        # destination already infected - i.e. not susceptible
+        if(state[dest] != 0)
+          next
+
+
+# Transmission - applies transmission step - an infectious source may infect a susceptible destination. With probability 'beta', the destination farm becomes exposed (state = 1) and is day counter resets to 0 
+# https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/Uniform - runif() - generates random number between 0-1, if number is < beta - infection progresses = Bernoulli
+        
+        if(runif(1) < beta){
+
+          state[dest] <- 1
+          days[dest] <- 0
+
+        }
+
+      }
+
+    }
+
+    
+# Save epidemic - logs the SEIR count for the current simulation day - store the day number; count how many farms are S,E,I,R and write those values into the corresponding row of history
+    
+    history$day[day] <- day
+    history$S[day] <- sum(state == 0)
+    history$E[day] <- sum(state == 1)
+    history$I[day] <- sum(state == 2)
+    history$R[day] <- sum(state == 3)
+
+  }
+
+
+# Return - returns the simulation output as a structured list
+  
+  list(
+
+    history = history, # stores the full day-by-day SEIR counts
+
+    final_states = data.frame( # data frame listing each farm and its final SEIR state, converts numeric codes (0-3) into labelled factors S,E,I,R
+
+      farm = farms,
+
+      state = factor(
+        state,
+        levels = 0:3,
+        labels = c("S","E","I","R")
+      )
+
+    )
+
+  )
+
+}
+```
+
+# Provide movement data
+
+```{r}
+# read in csv
+movements_raw <- read.csv(
+    "RQ1 NO EP.csv",
+    stringsAsFactors = FALSE
+)
+# head(movements_raw)
+```
+
+```{r}
+# check the structure
+str(movements_raw)
+```
+```{r}
+# create simulation movement  table
+movements <- movements_raw %>%
+    select(
+        source = org_id,
+        destination = dest_id,
+        day,
+        total_cattle
+    )
+# head(movements)
+```
+
+
+```{r}
+# convert  farm IDs to chr rather than integer to stop e.g. 1 being  treated differently from 001 in future datasets
+movements <- movements %>%
+    mutate(
+        source = as.character(source),
+        destination = as.character(destination)
+    )
+```
+
+```{r}
+# check structure
+str(movements)
+```
+```{r}
+# number of movement events
+nrow(movements)
+```
+# Run simulation
+```{r}
+# N.B.this is only running one replicate of the simulation- being stochastic need to run 100-1000 replicates because each will be slightly different
+result <- run_seir(
+    movements,
+    seed_farm = "285" # choose farm to seed infection - needs updated to allow several farms
+)
+
+head(result$history)
+```
+```{r}
+# plot the curve - using ggplot
+
+result$history %>%
+    pivot_longer(
+        cols = c(S,E,I,R),
+        names_to = "state",
+        values_to = "farms"
+    ) %>%
+    ggplot(
+        aes(
+            x = day,
+            y = farms,
+            colour = state
+        )
+    ) +
+    geom_line(size = 1) +
+    theme_minimal()
+```
+# Update to SOIR model
+
+from 'SOIR MODEL'
+
+State encoding            Movement transmission?
+0 = S (Suscpetible farm)          No
+1 = O (Occult infection)          No (evidence to show can shed during occult - left out for simplicity of model)
+2 = I (Infectious/shedding farm)  Yes
+3 = R (removed)                   No
+
+Updated to SOIR because in bTB, infection does not immediately = infectiousness (https://pmc.ncbi.nlm.nih.gov/articles/PMC3475695/#s4)
+
+```{r}
+# model is unweighted by total_cattle - movement is either present or absent
+run_soir <- function(
+    movements,
+    seed_farms, # can seed 1+ farms in one run - see update below
+    beta = 0.05, # explore 0.001 - 0.05
+    occult_period = 120, # explore 60-240
+    infectious_period = 180 # explore 90 - 135
+){
+  
+  
+# Build lookup table - pulls every unique farm ID from both the source and destination columns of movements  - combines, removes duplicates, sorts --> (farms) is a clean lookup table of all farms involved in the dataset
+  
+  farms <- sort(unique(c(
+    movements$source,
+    movements$destination
+  )))
+  
+# creates a numeric index for the farms, labels each with a number corresponding to the farm ID
+  n_farms <- length(farms)
+
+  farm_index <- seq_len(n_farms)
+  names(farm_index) <- farms
+
+ 
+# Convert movements to integer indices
+
+  movements$source_id <- farm_index[movements$source]
+  movements$dest_id   <- farm_index[movements$destination]
+
+# Set up vectors to track each farms disease status and how long it has been in its current state
+  
+  state <- integer(n_farms) # creates a vector of zeros - meaning all farms start susceptible
+
+  days <- integer(n_farms) # creates a parallel vector to count how many days each farm has spent in its current state
+
+ 
+# Seed infection - infect chosen seed farm by setting its state to 1 - farms to start as occult - representative of dz introduction
+# Reset their disease timers to 0 days, indicating they have just entered the infectious state
+  
+  state[farm_index[seed_farms]] <- 1  # find farm(s) listed in seed_farms, look up their position in the 'state' vector using 'farm_index'; change disease state S -> 0
+  days[farm_index[seed_farms]] <- 0 # for the same seeded farm(s), set no. days spent in current dz state to 0 - farm has just become occult at the start of the simulation
+
+# Storage - prepares storage for the simulation results
+
+  max_day <- max(movements$day) # finds last day in the movement dataset
+
+# history - creates a data frame with one row per day, and columns for the number of farms in each SOIR state, all columns are pre-allocated as integer vectors of length max_day for filling during the simulation
+  
+  history <- data.frame( 
+    day = integer(max_day), 
+    S = integer(max_day),
+    O = integer(max_day),
+    I = integer(max_day),
+    R = integer(max_day)
+  )
+
+
+# Simulation - advances farms through the O -> I -> R stages as each day of the simulation passes
+# the 'for' loop runs one iteration per day
+
+  for(day in seq_len(max_day)){
+
+
+# Progress exposed farms:
+# The day counters increase, and farms that have spent more than occult_period days in O become infectious (state == 2) and their day counters reset
+    
+    occult <- which(state == 1)
+
+    if(length(occult) > 0){
+
+      days[occult] <- days[occult] + 1 # increments until reaches occult_period -> becomes infectious
+
+      become_I <- occult[
+        days[occult] >= occult_period
+      ]
+
+      state[become_I] <- 2
+      days[become_I] <- 0
+
+    }
+
+
+# Progress infectious farms
+
+    infectious <- which(state == 2)
+
+# Their day counters increase, any farms that have spent more than infectious_period i days in I become removed (state == 3) and their day counters reset    
+    
+    if(length(infectious) > 0){
+
+      days[infectious] <- days[infectious] + 1
+
+      become_R <- infectious[
+        days[infectious] >= infectious_period
+      ]
+
+      state[become_R] <- 3
+      days[become_R] <- 0
+
+    }
+
+# Today's movements - filters the 'movements' data frame to keep just the rows where 'day' matches the current loop day, giving the set of movements to process for that day.
+
+    todays <- movements[movements$day == day, ]
+
+# Replay movement events - processes each movement and applies infection-spread rules.
+# loop over all movements happening today, for each movement, get the source and destination farm indices; skip the movement if the source is not infectious (state != 2); skip the movement if the destination is not susceptible (state != 0). Only movements from the infectious -> susceptible farms proceed to the transmission step that follows.
+    
+
+    if(nrow(todays) > 0){
+
+      for(i in seq_len(nrow(todays))){
+
+        source <- todays$source_id[i]
+        dest   <- todays$dest_id[i]
+
+        # source not infectious
+        if(state[source] != 2)
+          next
+
+        # destination already infected
+        if(state[dest] != 0)
+          next
+
+
+# Transmission - applies transmission step - an infectious source may infect a susceptible destination. With probability 'beta', the destination farm becomes exposed (state = 1) and is day counter resets to 0 
+# runif(1) generates a random number between 0 and 1, if that random number is less than beta, transmission occurs - changes destination farm's state from S -> O, resets the dz timer. So if beta = 0.05 = 5% chance that an infectious movement infects the destination farm. Bernoulli probability 0.05/0.95; https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/Uniform
+       
+        if(runif(1) < beta){
+
+          state[dest] <- 1
+          days[dest] <- 0
+
+        }
+
+      }
+
+    }
+
+# Save epidemic - logs the SOIR count for the current simulation day - store the day number; count how many farms are S,O,I,R and write those values into the corresponding row of history
+    
+
+    history$day[day] <- day
+    history$S[day] <- sum(state == 0)
+    history$O[day] <- sum(state == 1)
+    history$I[day] <- sum(state == 2)
+    history$R[day] <- sum(state == 3)
+
+  }
+
+# Return - returns the simulation output as a structured list
+
+  list(
+
+    history = history, # stores the full day-by-day SOIR counts
+
+    final_states = data.frame( # data frame listing each farm and its final SOIR state, converts numeric codes (0-3) into labelled factors S,O,I,R
+
+      farm = farms,
+
+      state = factor(
+        state,
+        levels = 0:3,
+        labels = c("S","O","I","R")
+      )
+
+    )
+
+  )
+
+}
+```
+
+Transmission events were simulated stochastically using Bernoulli trials. For each eligible movement, a uniform random number (runif(1)) was drawn and transmission occurred when the random draw was less than the calculated transmission probability (beta).
+
+Provide movement data
+```{r}
+# read in csv
+movements_raw <- read.csv(
+    "RQ1 NO EP.csv",
+    stringsAsFactors = FALSE
+)
+#head(movements_raw )
+```
+```{r}
+# check the structure
+str(movements_raw)
+```
+```{r}
+# create simulation movement  table
+movements <- movements_raw %>%
+    select(
+        source = org_id,
+        destination = dest_id,
+        day,
+        total_cattle
+    )
+#head(movements)
+```
+```{r}
+# convert  farm IDs to chr rather than integer to stop e.g. 1 being  treated differently from 001 in future datasets
+movements <- movements %>%
+    mutate(
+        source = as.character(source),
+        destination = as.character(destination)
+    )
+```
+```{r}
+str(movements)
+```
+```{r}
+# number of movement events
+nrow(movements)
+```
+
+```{r}
+# N.B. this is only one replicate - is stochastic - need 100-1000 replicates
+result <- run_soir(
+    movements,
+    seed_farms = c("2", "300", "193", "65")
+)
+
+#head(result$history)
+```
+```{r}
+test <- run_soir(
+  movements = movements,
+  seed_farms = "95",
+  beta = 0.05,
+  occult_period = 120,
+  infectious_period = 180
+)
+```
+```{r}
+# plot data - ggplot
+test$history %>%
+    tidyr::pivot_longer(
+        cols = c(S,O,I,R),
+        names_to = "state",
+        values_to = "farms"
+    ) %>%
+    ggplot(
+        aes(
+            x = day,
+            y = farms,
+            colour = state
+        )
+    ) +
+    geom_line(size = 1) +
+    theme_minimal()
+```
+NEXT - SENSITIVITY ANALYSIS - MIGHT AS WELL DO AT SAME TIME AS WRITE UP LIKE FOR RQ1
+
