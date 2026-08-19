@@ -340,6 +340,7 @@ table(test$final_states$state)
 
 https://aab.copernicus.org/articles/53/529/2010/aab-53-529-2010.pdf
 https://www.sciencedirect.com/science/article/pii/S1755436510000460
+https://arxiv.org/pdf/2607.01476
 
 Because stochastic epidemic models incorporate uncertainty in both disease processes and transmission dynamics, sensitivity analyses are required to determine whether model outputs are robust to variation in uncertain parameters. Similar approaches have been applied in livestock disease simulations, where key epidemiological parameters were varied to evaluate their influence on simulated outbreaks.
 

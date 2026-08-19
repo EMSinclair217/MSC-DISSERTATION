@@ -1,7 +1,7 @@
 ---
 title: "RQ2 SOIR SIMS ZIP"
 author: "ESINCLAIR"
-date: "2026-08-12"
+date: "2026-08-19"
 output: html_document
 ---
 
@@ -9,10 +9,1516 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+WHEN SAVING TO SUBMIT - Make a copy specifically for knitting, where the expensive simulation chunks are set to eval=FALSE only in the copy. The code remains visible in the knitted document, but isn't executed.
+
+
+RQ2 – epidemiological consequences: do structurally important farms actually matter for disease spread - How do structurally identified  superspreader candidate farms influence the scale and dynamics of simulated  bTB-like disease spread compared with random introductions and targeted removal scenarios. - i.e. do structurally important farms acutally matter for disease spread?
+
+CONTAINS REPLICATE ANALYSIS & SIMS
+
+# Scenarios - static network analysis - identified farms consistently high-risk - persistence graph across all 12 months - and run SOIR from day 1 - ?are farms that are consistently structurally important across the whole study period better targets for intervention?
+
+Use data from RQ1 to define candidate farms - persistent high OD/BT farms. All simulations start same day, same movement period, same B, same SOIR parameters, same number of stochastic replicates
+
+
 ```{r}
-# import libraries
 library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(pbapply)
 ```
+
+```{r}
+# from RQ2 SOIR SIMS
+# only runs one replicate 
+run_soir_weighted_RQ2 <- function(
+    movements,
+    seed_farms,
+    beta = 0.005, 
+    occult_period = 120,
+    infectious_period = 180
+){
+  
+  
+  farms <- sort(unique(c(
+    movements$source,
+    movements$destination
+  )))
+  
+  n_farms <- length(farms)
+
+  farm_index <- seq_len(n_farms)
+  names(farm_index) <- farms
+  
+ 
+  movements$source <- as.character(movements$source)
+  movements$destination <- as.character(movements$destination)
+
+
+
+  movements$source_id <- farm_index[movements$source]
+  movements$dest_id   <- farm_index[movements$destination]
+  
+  
+  
+  state <- integer(n_farms) 
+
+  days <- integer(n_farms) 
+
+
+
+  state[farm_index[seed_farms]] <- 1 
+  days[farm_index[seed_farms]] <- 0 
+
+
+
+  max_day <- max(movements$day) 
+
+  
+  history <- data.frame( 
+    day = integer(max_day), 
+    S = integer(max_day),
+    O = integer(max_day),
+    I = integer(max_day),
+    R = integer(max_day)
+  )
+
+
+  for(day in seq_len(max_day)){
+
+
+
+    
+    occult <- which(state == 1)
+
+    if(length(occult) > 0){
+
+      days[occult] <- days[occult] + 1 
+
+      become_I <- occult[
+        days[occult] >= occult_period
+      ]
+
+      state[become_I] <- 2
+      days[become_I] <- 0
+
+    }
+
+
+
+    infectious <- which(state == 2)
+
+    
+    if(length(infectious) > 0){
+
+      days[infectious] <- days[infectious] + 1
+
+      become_R <- infectious[
+        days[infectious] >= infectious_period
+      ]
+
+      state[become_R] <- 3
+      days[become_R] <- 0
+
+    }
+
+
+    todays <- movements[movements$day == day, ]
+
+
+    if(nrow(todays) > 0){
+
+      for(i in seq_len(nrow(todays))){
+
+        source <- todays$source_id[i]
+        dest   <- todays$dest_id[i]
+
+        
+        if(state[source] != 2)
+          next
+
+        
+        if(state[dest] != 0)
+          next
+       
+        batch_size <- todays$total_cattle[i] 
+        p_transmit <- 1 - (1 - beta)^batch_size 
+        
+        if(runif(1) < p_transmit){ 
+
+          state[dest] <- 1
+          days[dest] <- 0
+
+        }
+
+      }
+
+    }
+
+    
+    history$day[day] <- day
+    history$S[day] <- sum(state == 0)
+    history$O[day] <- sum(state == 1)
+    history$I[day] <- sum(state == 2)
+    history$R[day] <- sum(state == 3)
+
+  }
+
+  list(
+
+    history = history, 
+
+    final_states = data.frame( 
+
+      farm = farms,
+
+      state = factor(
+        state,
+        levels = 0:3,
+        labels = c("S","O","I","R")
+      )
+
+    )
+
+  )
+
+}
+```
+
+# Provide movement data
+```{r}
+# read in csv
+movements_raw <- read.csv(
+    "RQ1 NO EP.csv",
+    stringsAsFactors = FALSE
+)
+
+#head(movements_raw)
+```
+
+```{r}
+# create simulation movement  table
+
+movements <- movements_raw %>%
+    select(
+        source = org_id,
+        destination = dest_id,
+        day,
+        total_cattle
+    )
+#head(movements)
+```
+
+# Visual of probability x batch size
+https://ggplot2.tidyverse.org/articles/ggplot2.html
+```{r}
+
+beta <- 0.005
+
+df <- data.frame(
+  batch_size = 1:800
+)
+
+df$p_transmit <- 1 - (1 - beta)^df$batch_size
+
+
+ggplot(df, aes(x = batch_size, y = p_transmit)) +
+  geom_line(
+    colour = "firebrick",
+    linewidth = 1.2
+  ) +
+  labs(
+    x = "Cattle moved per batch",
+    y = "Probability of transmission",
+    title = paste0(
+      "Effect of batch size on transmission probability (β = ",
+      beta,
+      ")"
+    )
+  ) +
+  theme_classic()
+```
+```{r}
+# TEST WORKS WITH OUTPUT
+# N.B. without 'scenarios... replicates - this is only running ONCE
+result_weighted_RQ2 <- run_soir_weighted_RQ2(
+    movements,
+    seed_farms = c("95")
+)
+
+head(result_weighted_RQ2$history)
+```
+```{r}
+max(result_weighted_RQ2$history$I)
+```
+```{r}
+# N.B.this is just one run
+result_weighted_RQ2$history %>%
+    tidyr::pivot_longer(
+        cols = c(S,O,I,R),
+        names_to = "state",
+        values_to = "farms"
+    ) %>%
+    ggplot(
+        aes(
+            x = day,
+            y = farms,
+            colour = state
+        )
+    ) +
+    geom_line(size = 1) +
+    theme_minimal()
+```
+
+Create workflow to include replicate - modified from sensitivity analysis - COPY AND PASTES BELOW
+
+
+MODIFIED VERSION FOR BASELINE MODEL
+```{r}
+# runs same model but with 10 independent stochastic simulation replicates
+# run_soir_weighted_RQ2() = one SOIR epidemic simulation
+# run_baseline() = one replicate, including randomly selecting seed farm
+# baseline_scenario_grid = creates 10 replicate rows
+# pblapply() calls run_baseline() once for each row
+
+
+baseline_scenario_grid <- data.frame(
+  replicate = 1:10
+)
+
+run_baseline <- function(scenario_row){
+  
+  
+  seed_farm <- sample(unique(c(movements$source, movements$destination)),
+                      1
+                      )
+  # Run SOIR model
+  result <- run_soir_weighted_RQ2(
+    movements = movements,
+    seed_farms = seed_farm,
+    beta = 0.005,
+    occult_period = 120,
+    infectious_period = 180
+    )
+  
+  # Create daily output 
+  daily_output <- data.frame(
+    replicate = scenario_row$replicate,
+    day = result$history$day,
+    susceptible = result$history$S,
+    infectious = result$history$I,
+    occult = result$history$O,
+    removed = result$history$R,
+    total_infected = result$history$O +
+      result$history$I + 
+      result$history$R
+  )
+  
+  # Create summary outputs - records key statistics for the simulation
+  summary_output <- data.frame(
+    
+    replicate = scenario_row$replicate,
+    seed_farm = seed_farm,
+    final_infected = sum(result$final_states$state!= "S"),
+    peak_infectious = max(result$history$I)
+  )
+  
+  # Return both outputs
+  list(
+    daily = daily_output, # time series epidemic data
+    summary = summary_output # overall simulation stats
+  )
+}
+```
+```{r}
+# executes the 10 simulations 
+# runs the run_baseline() function once for each row of baseline_scenario_grid and stores all the results
+baseline_results <- pblapply(
+  seq_len(nrow(baseline_scenario_grid)), # generates sequence 1,2,...10
+  function(i){ # defines a temporary function that takes the row number 'i'
+    run_baseline(baseline_scenario_grid[i, , drop = FALSE]) # extracts the 'ith row of the baseline_scenario_grid, drop=FALSE ensures it remains a data frame rather than being simplified to a vector - passes that row into run_baseline() as scenario_row
+  }
+)
+
+```
+
+```{r}
+# organise/combine the outputs from the simulations that have already been run, into one dataframe
+
+
+# daily result - epidemic curves for all 10 stochastic runs
+daily_results <- bind_rows( 
+  lapply(baseline_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results <- bind_rows(
+  lapply(baseline_results, function(x) x$summary)
+)
+```
+```{r}
+# daily_results
+# summary_results
+```
+
+# Baseline with 50/100/300/500/1000/2000 runs - analysis to establish replicates
+
+```{r}
+replicate_tests <- c(10, 50, 100, 300, 500, 1000, 2000)
+
+results <- list()
+
+for (n in replicate_tests) {
+  
+  baseline_scenario_grid <- data.frame(
+    replicate = 1:n
+  )
+
+# pblapply() calls run-baseline() function created earlier, repeatedly (contains the SOIR model)
+  
+  baseline_results <- pblapply(
+    seq_len(nrow(baseline_scenario_grid)),
+    function(i){
+      run_baseline(baseline_scenario_grid[i, , drop = FALSE])
+    }
+  )
+
+# just extract summary results because want to see mean(final_infected)  
+    
+  summary_results <- bind_rows(
+    lapply(baseline_results, function(x) x$summary)
+  )
+
+# store mean final outbreak size for each tested number of replicates; converts 'n' to character to label mean_final_infected
+  #results[[as.character(n)]] <- mean(summary_results$final_infected)
+  results[[as.character(n)]] <- data.frame(
+  replicates = n,
+  mean_final = mean(summary_results$final_infected),
+  median_final = median(summary_results$final_infected),
+  prob_spread = mean(summary_results$final_infected > 1),
+  p95_final = as.numeric(quantile(summary_results$final_infected, 0.95))
+)
+}
+```
+```{r}
+# combine results
+stability_results <- bind_rows(results)
+
+stability_results
+```
+
+
+```{r}
+results_df <- bind_rows(results)
+
+results_df
+```
+```{r}
+ggplot(results_df, aes(x = replicates, y = mean_final)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Number of stochastic replicates",
+    y = "Mean final infected farms",
+    title = "Stabilisation of outbreak size estimate"
+  ) +
+  theme_classic()
+```
+```{r}
+# Probability of spread
+ggplot(results_df, aes(x = replicates, y = prob_spread)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Number of stochastic replicates",
+    y = "Probability of spread"
+  ) +
+  theme_classic()
+```
+```{r}
+# 95th percentile
+ggplot(results_df, aes(x = replicates, y = p95_final)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Number of stochastic replicates",
+    y = "95th percentile final infected farms"
+  ) +
+  theme_classic()
+```
+
+# SCENARIOS
+
+Read in data from RQ1
+```{r}
+# OUTDEGREE
+OD_all_candidates <- readRDS(
+  "outdegree_all_candidates.rds"
+)
+
+OD_med_candidates <- readRDS(
+  "outdegree_med_persistent.rds"
+)
+
+OD_high_candidates <- readRDS(
+  "outdegree_high_persistent.rds"
+)
+```
+
+```{r}
+head(OD_all_candidates)
+```
+
+```{r}
+# BETWEENNESS
+BT_all_candidates <- readRDS(
+  "BT_any_persistent_corrected.rds"
+) # 35 nodes
+
+BT_high_candidates <- readRDS(
+  "BT_high_persistent_corrected.rds"
+) # 1 node
+
+BT_med_candidates <- readRDS(
+  "BT_med_persistent_corrected.rds"
+) # 8 nodes
+```
+```{r}
+BT_all_candidates
+```
+```{r}
+# removed lengths - these are stored as character/lists not table so length appropriate
+length(OD_all_candidates)
+length(OD_high_candidates)
+length(OD_med_candidates)
+length(BT_all_candidates)
+length(BT_high_candidates)
+length(BT_med_candidates)
+```
+# Modify function for scenarios
+
+Scenarios:
+
+   (1) Baseline
+  
+  (2) Outdegree >= 8 months
+  (3) Outdegree >= 6 months
+  (4) Outdegree any month
+  
+  (5) Betweenness >= 6 months
+  (6) Betweenness >= 4 months
+  (7) Betweenness any month
+  
+  (8) Combined BT >= 6 months & OD >= 8 months
+  (9) Combined BT>= 4 months & 0D >= 6 months
+  (10) Combined any month
+  
+  CONTROLS - If I remove the same number of farms, is targeted removal (SC2-10) more effective than random removal?
+  (11) random X farms (average of scenarios 2/5/8) = 9.33 (9)
+  (12) random X farms (average of scenarios 3/6/9) = 4.33 (4)
+  (13) random X farms (average of scenarios 4/7/10) = 40.33 (40)
+  
+Persistence thresholds were selected based on temporal persistence distributions of each centrality measure. Outdegree hubs emerged throughout the study period of network analysis, whereas betweeness farms did not emerge until approximately month 6 (when cow-calf started trading). Consequently, different persistence thresholds were used to identify sustained structural importance of each metric.
+
+N.B. hierarchal network (usualy for livestock) - until cow-calf starts to trade, two levels and high outdegree farms present/informative of structural SS characteristics; betweenness develops with cow-calf trading. I.e. outdegree heterogeneity emerges early; betweenness heterogeneity emerges only once cow-calf layer developes
+
+# Create new movement datasets with excluded farms
+
+Change this to only scenarios used, add pooled controls, match to table in dissertation
+
+```{r}
+# SCENARIO 1 - baseline - no nodes removed
+scenario_1 <- movements
+```
+```{r}
+dim(scenario_1)
+length(unique(c(scenario_1$source, scenario_1$destination))) # number of nodes
+```
+```{r}
+# SCENARIO 2 - Outdegree >= 8 months
+scenario_2 <- movements %>%
+  filter(
+    !(source %in% OD_high_candidates),
+    !(destination %in% OD_high_candidates)
+  )
+```
+```{r}
+# debug
+sum(is.na(scenario_2$source))
+sum(is.na(scenario_2$destination))
+```
+```{r}
+# check worked & df
+any(OD_high_candidates %in% scenario_2$source)
+any(OD_high_candidates %in% scenario_2$destination)
+class(scenario_2)
+```
+```{r}
+# SCENARIO 3 - Outdegree >= 6 months
+scenario_3 <- movements %>%
+  filter(
+    !(source %in% OD_med_candidates),
+    !(destination %in% OD_med_candidates)
+  )
+```
+```{r}
+# check worked & df
+any(OD_med_candidates %in% scenario_3$source)
+any(OD_med_candidates %in% scenario_3$destination)
+class(scenario_3)
+```
+```{r}
+# SCENARIO 4 - Outdegree any months
+scenario_4 <- movements %>%
+  filter(
+    !(source %in% OD_all_candidates),
+    !(destination %in% OD_all_candidates)
+  )
+```
+```{r}
+# check worked & df
+any(OD_all_candidates %in% scenario_4$source)
+any(OD_all_candidates %in% scenario_4$destination)
+class(scenario_4)
+```
+```{r}
+# SCENARIO 5 - Betweeness >= 6 months
+scenario_5 <- movements %>%
+  filter(
+    !(source %in% BT_high_candidates),
+    !(destination %in% BT_high_candidates)
+  )
+```
+```{r}
+# check worked & df
+any(BT_high_candidates %in% scenario_5$source)
+any(BT_high_candidates %in% scenario_5$destination)
+class(scenario_5)
+```
+```{r}
+# SCENARIO 6 - Betweeness >= 4 months
+scenario_6 <- movements %>%
+  filter(
+    !(source %in% BT_med_candidates),
+    !(destination %in% BT_med_candidates)
+  )
+```
+```{r}
+# check worked & df
+any(BT_med_candidates %in% scenario_6$source)
+any(BT_med_candidates %in% scenario_6$destination)
+class(scenario_6)
+```
+```{r}
+# SCENARIO 7 - Betweeness any months
+scenario_7 <- movements %>%
+  filter(
+    !(source %in% BT_all_candidates),
+    !(destination %in% BT_all_candidates)
+  )
+```
+```{r}
+# check worked & df
+any(BT_all_candidates %in% scenario_7$source)
+any(BT_all_candidates %in% scenario_7$destination)
+class(scenario_7)
+```
+```{r}
+# SCENARIO 8 - Combined BT >= 6 months & OD >= 8 months
+scenario_8 <- movements %>%
+  filter(
+    !(source %in% CB_high_candidates),
+    !(destination %in% CB_high_candidates)
+  )
+```
+```{r}
+# check worked & df
+any(CB_high_candidates %in% scenario_8$source)
+any(CB_high_candidates %in% scenario_8$destination)
+class(scenario_8)
+length(scenario_8)
+```
+```{r}
+# SCENARIO 9 - Combined BT>= 4 months & 0D >= 6 months
+scenario_9 <- movements %>%
+  filter(
+    !(source %in% CB_med_candidates),
+    !(destination %in% CB_med_candidates)
+  )
+```
+```{r}
+# check worked & df
+any(CB_med_candidates %in% scenario_9$source)
+any(CB_med_candidates %in% scenario_9$destination)
+class(scenario_9)
+dim(scenario_9)
+```
+```{r}
+# SCENARIO 10 - Combined any month
+scenario_10 <- movements %>%
+  filter(
+    !(source %in% CB_all_candidates),
+    !(destination %in% CB_all_candidates)
+  )
+```
+```{r}
+# check worked & df
+any(CB_all_candidates %in% scenario_10$source)
+any(CB_all_candidates %in% scenario_10$destination)
+class(scenario_10)
+```
+
+```{r}
+# control 1 (high)
+# SCENARIO 11 - random removal of 4 farms
+
+set.seed(11) # Set random seed to ensure the same random farms can be selected in future runs.
+
+all_farms <- unique(c(movements$source, movements$destination))
+
+random_4 <- sample(all_farms, 4) 
+
+scenario_11 <- movements %>%
+  filter(
+    !(source %in% random_4),
+    !(destination %in% random_4)
+  )
+```
+```{r}
+# check worked & df
+any(random_4 %in% scenario_11$source)
+any(random_4 %in% scenario_11$destination)
+class(scenario_11)
+dim(scenario_11) # - number of rows (movements)
+length(unique(c(scenario_11$source, scenario_11$destination))) # number of nodes
+```
+
+```{r}
+# control 2 (med)
+# SCENARIO 12 - random removal of 9 farms
+
+set.seed(12) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_9 <- sample(all_farms, 9)
+
+scenario_12 <- movements %>%
+  filter(
+    !(source %in% random_9),
+    !(destination %in% random_9)
+  )
+```
+```{r}
+# check worked & df
+any(random_9 %in% scenario_12$source)
+any(random_9 %in% scenario_12$destination)
+class(scenario_12)
+
+dim(scenario_12) # - number of rows (movements)
+length(unique(c(scenario_12$source, scenario_12$destination))) # number of nodes
+```
+
+```{r}
+# Control 3 (all)
+# SCENARIO 13 - random removal of 40 farms = control all
+
+set.seed(13) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_40 <- sample(all_farms, 40)
+
+scenario_13 <- movements %>%
+  filter(
+    !(source %in% random_40),
+    !(destination %in% random_40)
+  )
+```
+```{r}
+# check worked & df
+any(random_40 %in% scenario_13$source)
+any(random_40 %in% scenario_13$destination)
+class(scenario_13)
+```
+```{r}
+dim(scenario_13) # - number of rows (movements)
+length(unique(c(scenario_13$source, scenario_13$destination))) # number of nodes
+```
+ADD CONTROLS FOR EACH SCENARIO EXCEPT COMBINED - NOT USIGN
+
+```{r}
+# Control OD High 
+# SCENARIO 14 - random removal of 5 farms = control HIGH
+
+set.seed(14) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_5 <- sample(all_farms, 5)
+
+scenario_14 <- movements %>%
+  filter(
+    !(source %in% random_5),
+    !(destination %in% random_5)
+  )
+```
+```{r}
+# check worked & df
+any(random_5 %in% scenario_14$source)
+any(random_5 %in% scenario_14$destination)
+class(scenario_14)
+```
+```{r}
+# Control OD MED 
+# SCENARIO 15 - random removal of 8 farms = control MED
+
+set.seed(15) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_8 <- sample(all_farms, 8)
+
+scenario_15 <- movements %>%
+  filter(
+    !(source %in% random_8),
+    !(destination %in% random_8)
+  )
+```
+```{r}
+# check worked & df
+any(random_8 %in% scenario_15$source)
+any(random_8 %in% scenario_15$destination)
+class(scenario_15)
+```
+```{r}
+# Control OD ALL 
+# SCENARIO 16 - random removal of 43 farms = control all
+
+set.seed(16) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_43 <- sample(all_farms, 43)
+
+scenario_16 <- movements %>%
+  filter(
+    !(source %in% random_43),
+    !(destination %in% random_43)
+  )
+```
+```{r}
+# check worked & df
+any(random_43 %in% scenario_16$source)
+any(random_43 %in% scenario_16$destination)
+class(scenario_16)
+```
+```{r}
+# Control BT HIGH 
+# SCENARIO 17 - random removal of 6 farms = control HIGH
+
+set.seed(111) # Set random seed to ensure the same random farms can be selected in future runs.
+
+all_farms <- unique(c(movements$source, movements$destination))
+
+random_1 <- sample(all_farms, 1)
+
+scenario_17 <- movements %>%
+  filter(
+    !(source %in% random_1),
+    !(destination %in% random_1)
+  )
+```
+```{r}
+# check worked & df
+any(random_1 %in% scenario_17$source)
+any(random_1 %in% scenario_17$destination)
+class(scenario_17)
+```
+```{r}
+# Control BT MED 
+# SCENARIO 18 - random removal of 14 farms = control MED
+
+set.seed(118) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_8 <- sample(all_farms, 18)
+
+scenario_18 <- movements %>%
+  filter(
+    !(source %in% random_8),
+    !(destination %in% random_8)
+  )
+```
+```{r}
+# check worked & df
+any(random_8 %in% scenario_18$source)
+any(random_8 %in% scenario_18$destination)
+class(scenario_18)
+```
+```{r}
+# Control BT ALL 
+# SCENARIO 19 - random removal of 47 farms = control all
+
+set.seed(119) # Set random seed to ensure the same random farms can be selected in future runs.
+
+random_35 <- sample(all_farms, 35)
+
+scenario_19 <- movements %>%
+  filter(
+    !(source %in% random_35),
+    !(destination %in% random_35)
+  )
+```
+```{r}
+# check worked & df
+any(random_35 %in% scenario_19$source)
+any(random_35 %in% scenario_19$destination)
+class(scenario_19)
+```
+```{r}
+# look-up table documenting which scenario each number represents
+scenario_table <- data.frame(
+  scenario = paste0("scenario_", 1:13),
+  description = c(
+    "Baseline",
+    "Outdegree >= 8 months",
+    "Outdegree >= 6 months",
+    "Outdegree any month",
+    "Betweenness >= 6 months",
+    "Betweenness >= 4 months",
+    "Betweenness any month",
+    "Combined BT >= 6 months & OD >= 8 months",
+    "Combined BT >= 4 months & OD >= 6 months",
+    "Combined any month",
+    "Control High",
+    "Control Med",
+    "Control All"
+  )
+)
+
+scenario_table
+```
+# Modify function so can be used for all scenarios, with 2000 replicates
+```{r}
+# modify function so can be used for all 2000 scenarios - just need to change movement_data and scenario_name when call it for each scenario - next box
+scenario_grid <- data.frame(
+  replicate = 1:2000
+)
+# pass scenario name and movement network as inputs. Function needs 3 inputs:
+# 1. one row from scenario_grid (scenario_row) - dont need to chanage this
+# 2. a movement dataset (movement_data)
+# 3. a label for the scenario (scenario_name)
+run_scenario <- function(scenario_row, movement_data, scenario_name){
+  
+  # Randomly select seed farm from the available network
+  seed_farm <- sample(
+    unique(c(movement_data$source, movement_data$destination)),
+    1
+  )
+  
+  # Run SOIR model
+  result <- run_soir_weighted_RQ2(
+    movements = movement_data,
+    seed_farms = seed_farm,
+    beta = 0.005,
+    occult_period = 120,
+    infectious_period = 180
+  )
+  
+  # Daily output
+  daily_output <- data.frame(
+    scenario = scenario_name,
+    replicate = scenario_row$replicate,
+    day = result$history$day,
+    susceptible = result$history$S,
+    infectious = result$history$I,
+    occult = result$history$O,
+    removed = result$history$R,
+    total_infected = result$history$O +
+      result$history$I +
+      result$history$R
+  )
+  
+  # Summary output
+  summary_output <- data.frame(
+    scenario = scenario_name,
+    replicate = scenario_row$replicate,
+    seed_farm = seed_farm,
+    final_infected = sum(result$final_states$state != "S"),
+    peak_infectious = max(result$history$I)
+  )
+  
+  list(
+    daily = daily_output,
+    summary = summary_output
+  )
+}
+```
+# Scenario 1 - Baseline
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_1_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_1,# movement dataset for this scenario_X 
+      "Baseline" # description of scenario - see look up table
+    )
+  }
+  
+)
+
+saveRDS(scenario_1_results, "scenario_1_results.rds")
+```
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC1 <- bind_rows( 
+  lapply(scenario_1_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC1 <- bind_rows(
+  lapply(scenario_1_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC1)
+head(summary_results_SC1)
+```
+
+# Scenario 2 - Outdegree (high) >= 8 months
+
+YOU ARE HERE - ERROR WHENRUNNING SIMULATION 29/07/26
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_2_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_2,# movement dataset for this scenario_X 
+      "Outdegree >= 8 months" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_2_results, "scenario_2_results.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC2 <- bind_rows( 
+  lapply(scenario_2_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC2 <- bind_rows(
+  lapply(scenario_2_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC2)
+head(summary_results_SC2)
+```
+
+
+
+# Scenario 3 - Outdegree (med) >= 6 months
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_3_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_3,# movement dataset for this scenario_X 
+      "Outdegree >= 6 months" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_3_results, "scenario_3_results.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC3 <- bind_rows( 
+  lapply(scenario_3_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC3 <- bind_rows(
+  lapply(scenario_3_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC3)
+head(summary_results_SC3)
+```
+
+# Scenario 4 - Outdegree any month
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_4_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_4,# movement dataset for this scenario_X 
+      "Outdegree any month" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_4_results, "scenario_4_results.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC4 <- bind_rows( 
+  lapply(scenario_4_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC4 <- bind_rows(
+  lapply(scenario_4_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC4)
+head(summary_results_SC4)
+```
+
+# Scenario 5 - Betweenness (high) >= 6 months
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_5_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_5,# movement dataset for this scenario_X 
+      "Betweenness >= 6 months" # description of scenario - see look up table
+    )
+  }
+)
+```
+```{r}
+saveRDS(scenario_5_results, "scenario_5_results_corrected.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC5 <- bind_rows( 
+  lapply(scenario_5_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC5 <- bind_rows(
+  lapply(scenario_5_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC5)
+head(summary_results_SC5)
+```
+
+# Scenario 6 - Betweenness (med) >= 4 months
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_6_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_6,# movement dataset for this scenario_X 
+      "Betweenness >= 4 months" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_6_results, "scenario_6_results_corrected.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC6 <- bind_rows( 
+  lapply(scenario_6_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC6 <- bind_rows(
+  lapply(scenario_6_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC6)
+head(summary_results_SC6)
+```
+
+# Scenario 7 - Betweenness any month
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_7_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_7,# movement dataset for this scenario_X 
+      "Betweenness any month" # description of scenario - see look up table
+    )
+  }
+)
+```
+```{r}
+saveRDS(scenario_7_results, "scenario_7_results_corrected.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC7 <- bind_rows( 
+  lapply(scenario_7_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC7 <- bind_rows(
+  lapply(scenario_7_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC7)
+head(summary_results_SC7)
+```
+
+# Scenario 8 - Combined (high) BT >= 6 months & OD >= 8 months
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_8_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_8,# movement dataset for this scenario_X 
+      "Combined BT >= 6 months & OD >= 8 months" # description of scenario - see look up table
+    )
+  }
+)
+```
+```{r}
+saveRDS(scenario_8_results, "scenario_8_results.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC8 <- bind_rows( 
+  lapply(scenario_8_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC8 <- bind_rows(
+  lapply(scenario_8_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC8)
+head(summary_results_SC8)
+```
+
+# Scenario 9 - Combined (med) BT>= 4 months & 0D >= 6 months
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_9_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_9,# movement dataset for this scenario_X 
+      "Combined BT>= 4 months & 0D >= 6 months" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_9_results, "scenario_9_results.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC9 <- bind_rows( 
+  lapply(scenario_9_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC9 <- bind_rows(
+  lapply(scenario_9_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC9)
+head(summary_results_SC9)
+```
+
+# Scenario 10 - Combined any month
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_10_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_10,# movement dataset for this scenario_X 
+      "Combined any month" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_10_results, "scenario_10_results.rds")
+```
+
+
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC10 <- bind_rows( 
+  lapply(scenario_10_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC10 <- bind_rows(
+  lapply(scenario_10_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC10)
+head(summary_results_SC10)
+```
+
+CONTROLS - If I remove the same number of farms, is targeted removal (SC2-10) more effective than random removal?
+# Scenario 11 - control High - random 4 farms (average of scenarios 3/6/9) = 4.33 (4) 
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_11_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_11,# movement dataset for this scenario_X 
+      "Control High" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_11_results, "scenario_11_results.rds")
+```
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC11 <- bind_rows( 
+  lapply(scenario_11_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC11 <- bind_rows(
+  lapply(scenario_11_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC11)
+head(summary_results_SC11)
+```
+# Scenario 12 - control med - random 9 farms (average of scenarios 2/5/8) = 9.33 (9)
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_12_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_12,# movement dataset for this scenario_X 
+      "Control Med" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_12_results, "scenario_12_results.rds")
+```
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC12 <- bind_rows( 
+  lapply(scenario_12_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC12 <- bind_rows(
+  lapply(scenario_12_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC12)
+head(summary_results_SC12)
+```
+# Scenario 13 - random 40 farms (average of scenarios 4/7/10) = 40.33 (40)
+
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_13_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_13,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_13_results, "scenario_13_results.rds")
+```
+# Scenario 14
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_14_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_14,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - OD HIGH CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_14_results, "scenario_14_results.rds")
+```
+# Scenario 15
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_15_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_15,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - OD MED CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_15_results, "scenario_15_results.rds")
+```
+# Scenario 16
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_16_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_16,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - OD ALL CONTROL
+    )
+  }
+)
+
+saveRDS(scenario_16_results, "scenario_16_results.rds")
+```
+# Scenario 17
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_17_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_17,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - BT HIGH CONTROL
+    )
+  }
+)
+```
+```{r}
+saveRDS(scenario_17_results, "scenario_17_results_corrected.rds")
+```
+# Scenario 18
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_18_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_18,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - BT MED CONTROL
+    )
+  }
+)
+```
+```{r}
+saveRDS(scenario_18_results, "scenario_18_results_corrected.rds")
+```
+# Scenario 19
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_19_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_19,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table - BT ALL CONTROL
+    )
+  }
+)
+```
+```{r}
+saveRDS(scenario_19_results, "scenario_19_results_corrected.rds")
+```
+```{r}
+# calls the function 2000 times - one for each row of scenario_grid
+scenario_19_results <- pblapply(
+  seq_len(nrow(scenario_grid)),
+  function(i){
+    run_scenario(
+      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
+      scenario_19,# movement dataset for this scenario_X 
+      "Control All" # description of scenario - see look up table
+    )
+  }
+)
+
+saveRDS(scenario_19_results, "scenario_19_results.rds")
+```
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC13 <- bind_rows( 
+  lapply(scenario_13_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC13 <- bind_rows(
+  lapply(scenario_13_results, function(x) x$summary)
+)
+```
+```{r}
+head(daily_results_SC13)
+head(summary_results_SC13)
+```
+

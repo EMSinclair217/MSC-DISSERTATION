@@ -462,7 +462,7 @@ for (s in names(removal_scenarios)) {
   
   gwcc_size <-max(comp$csize)
   
-  gwcc_percent <- (gwcc_size / farms_remaining) * 100
+  gwcc_percent <- (gwcc_size / farms_remaining) * 100 # this is GWCC size (% of farms remaining), NOT percentage of original network
   
   gwcc_results <- rbind(
     gwcc_results,

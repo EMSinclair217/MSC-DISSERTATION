@@ -1,0 +1,1162 @@
+---
+title: "RQ2 RESULTS ANALYSIS ZIP"
+author: "ESINCLAIR"
+date: "2026-08-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# libraries
+library(igraph)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(pbapply)
+```
+
+CONTAINS GWCC AND THRESHOLD ESTABLISHMENT + ANALYSIS
+
+Import results of simulations for anlysis (RQ2 SOIR SIMS)
+
+
+```{r}
+scenario_1_results <- readRDS("scenario_1_results.rds") # baseline
+scenario_2_results <- readRDS("scenario_2_results.rds") # Outdegree (high) >= 8 months
+scenario_3_results <- readRDS("scenario_3_results.rds") # Outdegree (med) >= 6 months
+scenario_4_results <- readRDS("scenario_4_results.rds") # Outdegree any month
+scenario_5_results <- readRDS("scenario_5_results_corrected.rds") # Betweenness (high) >= 6 months
+scenario_6_results <- readRDS("scenario_6_results_corrected.rds") # Betweenness (med) >= 4 months
+scenario_7_results <- readRDS("scenario_7_results_corrected.rds") # Betweenness any month
+
+scenario_14_results <- readRDS("scenario_14_results.rds") # OD HIGH CONTROL (5 removed)
+scenario_15_results <- readRDS("scenario_15_results.rds") # OD MED CONTROL (8 removed)
+scenario_16_results <- readRDS("scenario_16_results.rds") # OD ALL CONTROL (43 removed)
+scenario_17_results <- readRDS("scenario_17_results_corrected.rds") # BT HIGH CONTROL (1 removed)
+scenario_18_results <- readRDS("scenario_18_results_corrected.rds") # BT MED CONTROL (8 removed)
+scenario_19_results <- readRDS("scenario_19_results_corrected.rds") # BT ALL CONTROL (35 removed)
+```
+```{r}
+# combine the daily outputs from all 2000 sim replicates into one data frame
+
+# daily result - epidemic curves for all 2000 stochastic runs
+daily_results_SC1 <- bind_rows( 
+  lapply(scenario_1_results, function(x) x$daily) 
+)
+# peak infectious and final outbreak size per run
+summary_results_SC1 <- bind_rows(
+  lapply(scenario_1_results, function(x) x$summary)
+)
+```
+```{r}
+# Put all scenario results into one list
+all_scenarios <- list(
+  SC1 = scenario_1_results,
+  SC2 = scenario_2_results,
+  SC3 = scenario_3_results,
+  SC4 = scenario_4_results,
+  SC5 = scenario_5_results,
+  SC6 = scenario_6_results,
+  SC7 = scenario_7_results,
+  SC14 = scenario_14_results,
+  SC15 = scenario_15_results,
+  SC16 = scenario_16_results,
+  SC17 = scenario_17_results,
+  SC18 = scenario_18_results,
+  SC19 = scenario_19_results
+)
+
+# Create empty lists to store outputs
+daily_results <- list()
+summary_results <- list()
+
+# Loop through scenarios
+for (scenario in names(all_scenarios)) {
+  
+  daily_results[[scenario]] <- bind_rows(
+    lapply(all_scenarios[[scenario]], function(x) x$daily)
+  )
+  
+  summary_results[[scenario]] <- bind_rows(
+    lapply(all_scenarios[[scenario]], function(x) x$summary)
+  )
+}
+
+# call individual with - summary_results$SC3 etc
+```
+
+# Read in data from RQ1 for number farms removed
+
+```{r}
+# OUTDEGREE
+OD_all_candidates <- readRDS(
+  "outdegree_all_candidates.rds"
+)
+
+OD_med_candidates <- readRDS(
+  "outdegree_med_persistent.rds"
+)
+
+OD_high_candidates <- readRDS(
+  "outdegree_high_persistent.rds"
+)
+```
+
+```{r}
+#OD_all_candidates
+```
+```{r}
+# BETWEENNESS
+BT_all_candidates <- readRDS(
+  "BT_any_persistent_corrected.rds"
+)
+
+BT_high_candidates <- readRDS(
+  "BT_high_persistent_corrected.rds"
+)
+
+BT_med_candidates <- readRDS(
+  "BT_med_persistent_corrected.rds"
+)
+```
+```{r}
+#BT_med_candidates
+```
+
+# 1. Create scenario table - what was removed
+
+```{r}
+total_farms = 301
+scenario_table <- data.frame(
+  Scenario = c(
+    "(1)",
+    "(2)",
+    "(3)",
+    "(4)",
+    "(5)",
+    "(6)",
+    "(7)",
+    #"(8)",
+    #"(9)",
+    #"(10)",
+    #"(11)",
+    #"(12)",
+    #"(13)",
+    "(14)",
+    "(15)",
+    "(16)",
+    "(17)",
+    "(18)",
+    "(19)"
+  ),
+  
+  Type = c(
+    "Baseline",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    "Targeted Intervention",
+    #"Targeted Intervention",
+    #"Targeted Intervention",
+    #"Targeted Intervention",
+    #"Random removal control",
+    #"Random removal control",
+    #"Random removal control",
+    "CONTROL OD HIGH",
+    "CONTROL OD MED",
+    "CONTROL OD ALL",
+    "CONTROL BT HIGH",
+    "CONTROL BT MED",
+    "CONTROL BT ALL"
+  ),
+  
+  Centrality = c(
+    "None",
+    "Out-degree",
+    "Out-degree",
+    "Out-degree",
+    "Betweenness",
+    "Betweenness",
+    "Betweenness",
+    #"Combined",
+    #"Combined",
+   # "Combined",
+   # "Random",
+   # "Random",
+   # "Random",
+    "RandomOD",
+    "RandomOD",
+    "RandomOD",
+    "RandomBT",
+    "RandomBT",
+    "RandomBT"
+  ),
+  
+  Persistence = c(
+    "None",
+    "High >=8 months",
+    "Medium >=6 months",
+    ">=1 month",
+    "High >=6 months",
+    "Medium >=4 months",
+    ">= 1 month",
+   # "High BT >=6 AND OD >=8 months",
+    #"Medium BT >=4 AND OD>=6 months",
+    #">=1 month",
+   # "Matched to 'high' candidates",
+   # "Matched to 'medium' candidates",
+   # "Matched to 'all' candidates",
+    "Matched to OD HIGH",
+    "Matched to OD MED",
+    "Matched to OD ALL",
+    "Matched to BT HIGH",
+    "Matched to BT MED",
+    "Matched to BT ALL"
+  ),
+  Number_of_farms_removed = c(
+    0,
+    length(OD_high_candidates),
+    length(OD_med_candidates),
+    length(OD_all_candidates),
+    length(BT_high_candidates),
+    length(BT_med_candidates),
+    length(BT_all_candidates),
+    #length(CB_high_candidates),
+    #length(CB_med_candidates),
+    #length(CB_all_candidates),
+    #4,
+    #9,
+    #40,
+    5,
+    8,
+    43,
+    1,
+    8,
+    35
+  ),
+  
+  Percent_of_all_farms = c(
+    0,
+    length(OD_high_candidates)/total_farms*100,
+    length(OD_med_candidates)/total_farms*100,
+    length(OD_all_candidates)/total_farms*100,
+    length(BT_high_candidates)/total_farms*100,
+    length(BT_med_candidates)/total_farms*100,
+    length(BT_all_candidates)/total_farms*100,
+    #length(CB_high_candidates)/total_farms*100,
+    #length(CB_med_candidates)/total_farms*100,
+    #length(CB_all_candidates)/total_farms*100,
+    #4/total_farms*100,
+    #9/total_farms*100,
+    #40/total_farms*100,
+    5/total_farms*100,
+    8/total_farms*100,
+    43/total_farms*100,
+    1/total_farms*100,
+    8/total_farms*100,
+    35/total_farms*100
+  )
+)
+
+scenario_table
+```
+```{r}
+total_farms
+```
+
+# 2. show change in largest connected component - GWCC - show removal of potential transmission pathways (undirected) - did removal change the movement network
+
+load and construct the annual network
+```{r}
+# modify graph/network code from RQ1.Rmd
+create_movement_network <- function(df) {
+
+  # Convert IDs
+  df$org_id  <- as.character(df$org_id)
+  df$dest_id <- as.character(df$dest_id)
+
+  # Node table
+  org_nodes <- df[, c("org_id", "org_type")]
+  colnames(org_nodes) <- c("name", "type")
+
+  dest_nodes <- df[, c("dest_id", "dest_type")]
+  colnames(dest_nodes) <- c("name", "type")
+
+  nodes <- unique(rbind(org_nodes, dest_nodes))
+
+  # Edge list
+  edges <- df[, c("org_id", "dest_id")]
+
+  # Create directed network
+  g <- graph_from_data_frame(
+    d = edges,
+    vertices = nodes,
+    directed = TRUE
+  )
+
+  # Add weights
+  E(g)$weight <- df$total_cattle
+
+  return(g)
+}
+```
+
+```{r}
+# import data
+annual_movement <- read.csv("RQ1 NO EP.csv")
+head(annual_movement)
+```
+
+
+```{r}
+# create as graph network by calling function = construct annual movement network
+annual_network = create_movement_network(annual_movement)
+```
+```{r}
+# inspect the network
+vcount(annual_network)
+
+V(annual_network)$name
+```
+
+Calculate baseline GWCC
+```{r}
+# calculate basline GWCC
+baseline_gwcc <- max(components(annual_network, mode = "weak")$csize) # csize = extract number of farms in each connected component
+baseline_gwcc
+```
+Generate random removal controls
+
+```{r}
+# create random removal controls
+# removal-size controls representing the typical number of farms removed across each persistence category
+
+Control_high_random <- sample(
+  V(annual_network)$name,
+  size = 4,
+  replace = FALSE
+)
+
+Control_medium_random <- sample(
+  V(annual_network)$name,
+  size = 9,
+  replace = FALSE
+)
+
+Control_all_random <- sample(
+  V(annual_network)$name,
+  size = 40,
+  replace = FALSE
+)
+# ADD HERE IF WANT TO PUT CONTROLS PER SCENARIO RATHER THAN AVERAGES
+```
+Define all removal scenarios
+
+```{r}
+# create loop to speed up
+removal_scenarios <- list(
+  S2 = OD_high_candidates,
+  S3 = OD_med_candidates,
+  S4 = OD_all_candidates,
+  S5 = BT_high_candidates,
+  S6 = BT_med_candidates,
+  S7 = BT_all_candidates
+  #S8 = CB_high_candidates,
+  #S9 = CB_med_candidates,
+  #S10 = CB_all_candidates,
+  #S11 = Control_high_random,
+  #S12 = Control_medium_random,
+  #S13 = Control_all_random,
+  #Annual_Bt_FIVE = annual_BT_top5,
+  #Annual_OD_FIVE = annual_OD_top5,
+  #Annual_OD_deg = annual_OD_top5_deg
+  #SC14 = NEED TO ADD THESE
+  #SC15 = 
+  #SC16 = 
+  #SC17 = 
+  #SC18 = 
+  #SC19 = 
+)
+
+```
+
+Create empty results dataframe & apply each removal scenario & calculate network fragmentation
+
+```{r}
+gwcc_results <- data.frame(
+  Scenario = character(),
+  Farms_removed = numeric(),
+  GWCC_size = numeric(),
+  GWCC_percentage_remaining = numeric(),
+  Number_components = numeric()
+)
+
+#total_farms_nw = vcount(annual_network)
+
+for (s in names(removal_scenarios)) {
+  
+  removed_network <- delete_vertices(
+    annual_network,
+    removal_scenarios[[s]]
+  )
+  
+  comp <- components(removed_network, mode = "weak")
+  
+  farms_remaining <- vcount(removed_network)
+  
+  gwcc_size <-max(comp$csize)
+  
+  gwcc_percent <- (gwcc_size / farms_remaining) * 100 # this is GWCC size (% of farms remaining), NOT percentage of original network
+  
+  gwcc_results <- rbind(
+    gwcc_results,
+    data.frame(
+      Scenario = s,
+      Farms_removed = length(removal_scenarios[[s]]),
+      GWCC_size = gwcc_size,
+      GWCC_percentage_remaining = gwcc_percent,
+      Number_components = comp$no
+    )
+  )
+}
+```
+Calculate baseline network components again & add the baseline network to the scenario results
+
+```{r}
+# calculate baseline network components
+baseline_comp <- components(annual_network, mode = "weak")
+
+#baseline_gwcc <- max(baseline_comp$csize)
+
+#baseline_percent <- (baseline_gwcc / vcount(annual_network)) * 100
+
+#baseline_components <- baseline_comp$no
+
+# add baseline GWCC
+gwcc_results <- rbind(
+  data.frame(
+    Scenario = "S1",
+    Farms_removed = 0,
+    GWCC_size = max(baseline_comp$csize),
+    GWCC_percentage_remaining = (max(baseline_comp$csize) / vcount(annual_network))*100,
+    Number_components = baseline_comp$no
+  ),
+  
+  gwcc_results
+)
+```
+View final conenctivity results
+```{r}
+gwcc_results
+```
+Clear the results object
+```{r}
+# REMOVE RESULTS
+rm(gwcc_results)
+```
+Final network membership checks
+```{r}
+sum(annual_OD_top5 %in% V(annual_network)$name)
+```
+```{r}
+length(annual_OD_top5)
+length(intersect(annual_OD_top5, V(annual_network)$name))
+```
+
+## SOIR Epidemic outcome analysis ##
+
+# Established epidemic definition: threshold sensitivity analysis
+
+1. examine the baseline outbreak-size distribution
+
+  supports why selected >=10 - baseline histogram
+
+```{r}
+# plot the distribution
+
+ggplot(summary_results_SC1, aes(x = final_infected)) +
+  geom_histogram(
+    binwidth = 1,
+    colour = "black",
+    fill = "steelblue"
+  ) +
+  labs(
+    x = "Final outbreak size (infected farms)",
+    y = "Number of simulations",
+    title = "Distribution of final outbreak sizes"
+  ) +
+  theme_classic()
+```
+Create the scenario outbreak size data
+
+```{r}
+summary_results_SC1 <- summary_results$SC1
+summary_results_SC2 <- summary_results$SC2
+summary_results_SC3 <- summary_results$SC3
+summary_results_SC4 <- summary_results$SC4
+summary_results_SC5 <- summary_results$SC5
+summary_results_SC6 <- summary_results$SC6
+summary_results_SC7 <- summary_results$SC7
+#summary_results_SC8 <- summary_results$SC8
+#summary_results_SC9 <- summary_results$SC9
+#summary_results_SC10 <- summary_results$SC10
+#summary_results_SC11 <- summary_results$SC11
+#summary_results_SC12 <- summary_results$SC12
+#summary_results_SC13 <- summary_results$SC13
+summary_results_SC14 <- summary_results$SC14
+summary_results_SC15 <- summary_results$SC15
+summary_results_SC16 <- summary_results$SC16
+summary_results_SC17 <- summary_results$SC17
+summary_results_SC18 <- summary_results$SC18
+summary_results_SC19 <- summary_results$SC19
+```
+```{r}
+# create list of final outbreak sizes
+outbreak_sizes <- list(
+  Baseline = summary_results_SC1$final_infected,
+  Outdegree_high = summary_results_SC2$final_infected,
+  Out_degree_med = summary_results_SC3$final_infected,
+  Outdegree_all = summary_results_SC4$final_infected,
+  Betweenness_high = summary_results_SC5$final_infected,
+  Betweenness_med =summary_results_SC6$final_infected,
+  Betweenness_all = summary_results_SC7$final_infected
+)
+
+```
+Threshold sensitivity analysis
+  whether >=10 is robust
+  
+```{r}
+thresholds2 <- c(1, 2, 3, 5, 7, 10, 15, 20)
+
+threshold_results2 <- data.frame(
+  scenario = character(),
+  threshold = numeric(),
+  proportion = numeric(),
+  stringsAsFactors = FALSE
+  )
+
+
+for (s in names(outbreak_sizes)) {
+  
+  outbreaks <- outbreak_sizes[[s]]
+  
+  for (t in thresholds2) {
+    threshold_results2 <- rbind(
+      threshold_results2,
+      data.frame(
+        Scenario2 = s,
+        Threshold2 = t,
+        proportion2 = mean(outbreaks >= t) #* 100
+      )
+    )
+  }
+}
+```
+Sensitivity plot
+```{r}
+# plot sensitivity analysis
+
+ggplot(threshold_results2,
+       aes(x = Threshold2,
+           y = proportion2,
+           colour = Scenario2)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Threshold (infected farms)",
+    y = "Probability of a major outbreak",
+    colour = "Scenario"
+  ) +
+  theme_bw()
+```
+
+
+# RESULT 1
+
+Likelihood of sustained transmission - replicats led to >=10 infected final infected farms
+
+Define the scenarios and extract final outbreak size, this is the input to the analysis
+
+```{r}
+# list of scenarios to include - dropped combined - see prev
+sustained_trans <- list(
+  baseline = summary_results_SC1$final_infected, 
+  OD_high = summary_results_SC2$final_infected,
+  OD_med = summary_results_SC3$final_infected, 
+  OD_all = summary_results_SC4$final_infected, 
+  BT_high = summary_results_SC5$final_infected, 
+  BT_med = summary_results_SC6$final_infected, 
+  BT_all = summary_results_SC7$final_infected, 
+  #CT_high = summary_results_SC11 
+  #CT_med = summary_results_SC12 
+  #CT_ALL = summary_results_SC13 
+  CT_OD_HIGH = summary_results_SC14$final_infected,
+  CT_OD_MED = summary_results_SC15$final_infected,
+  CT_OD_ALL = summary_results_SC16$final_infected,
+  CT_BT_HIGH = summary_results_SC17$final_infected,
+  CT_BT_MED = summary_results_SC18$final_infected,
+  CT_BT_ALL = summary_results_SC19$final_infected
+)
+```
+Calculate the probability of sustained transmission and relative reduction
+
+```{r}
+# counts how many simulations exceeded the threshold & calculates number sustained outbreaks; proportion sustained outbreaks; relative reduction vs baseline
+threshold_final <- 10
+
+threshold_counts_final <- data.frame(
+  Scenario_final = names(sustained_trans),
+  Exceeding = sapply(sustained_trans, function(x) sum(x >= threshold_final)),
+  Total = sapply(sustained_trans, length)
+)
+
+threshold_counts_final$Proportion_final <- threshold_counts_final$Exceeding / threshold_counts_final$Total
+
+# extract baseline probability
+baseline_prob <- threshold_counts_final$Proportion_final[threshold_counts_final$Scenario_final == "baseline"]
+
+# calculate relatve reduction compared with baseline
+threshold_counts_final$Relative_reduction <- (
+  (baseline_prob - threshold_counts_final$Proportion_final) / baseline_prob
+)
+
+threshold_counts_final
+```
+
+Organise scenarios by intervention type and intensity
+
+```{r}
+# AI - how can i group this plot by intensity windows, maintaining controls
+# group by intensity and intervention type
+
+# grepl() - searches for a pattern in scenario name e.g. "High"
+# factor(..., levels = ...) - tells ggplot the order to display categories instead of using alphabetical order
+
+# create two empty columns to store grouping information for plotting
+threshold_counts_final$Intensity <- NA
+threshold_counts_final$Method <- NA
+
+  # assign intervention intensity
+
+# search scenario names (grepl) & assign each one to an intervention intensity label
+threshold_counts_final$Intensity[grepl("HIGH", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "High" # looks for high in every scenario name & assigns method
+threshold_counts_final$Intensity[grepl("MED", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "Medium"
+threshold_counts_final$Intensity[grepl("ALL", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "All"
+
+# assign the baseline scenario its own intensity label
+threshold_counts_final$Intensity[threshold_counts_final$Scenario_final == "baseline"] <- "Baseline"
+
+  # assign intervention method
+
+# Label taregted interventions (grepl) according to the network metric used
+threshold_counts_final$Method[grepl("^OD", threshold_counts_final$Scenario_final)] <- "Out-degree"
+threshold_counts_final$Method[grepl("^BT", threshold_counts_final$Scenario_final)] <- "Betweenness"
+
+# Keep the random matched controls separate from the targeted interventions
+threshold_counts_final$Method[grepl("CT_OD", threshold_counts_final$Scenario_final)] <- "Control (OD matched)"
+threshold_counts_final$Method[grepl("CT_BT", threshold_counts_final$Scenario_final)] <- "Control (BT matched)"
+
+# label the baseline scenario
+threshold_counts_final$Method[threshold_counts_final$Scenario_final == "baseline"] <- "Baseline"
+
+
+  # Set plotting order
+# convert intensity to an ordered factor so the panels appear in order wanted rather than alphabetically
+threshold_counts_final$Intensity <- factor(
+  threshold_counts_final$Intensity,
+  levels = c("High", "Medium", "All", "Baseline")
+)
+
+# convert method to an ordered factor to bars appear in order wanted rather than alphabetically 
+
+threshold_counts_final$Method <- factor(
+  threshold_counts_final$Method,
+  levels = c(
+    "Control (OD matched)",
+    "Out-degree",
+    "Control (BT matched)",
+    "Betweenness",
+    "Baseline"
+  )
+)
+```
+
+Create grouped probability plot
+
+```{r}
+# Duplicate baseline into each intensity panel
+
+baseline_row <- threshold_counts_final[
+  threshold_counts_final$Scenario_final == "baseline",
+]
+
+baseline_repeated <- baseline_row[rep(1, 3), ]
+
+baseline_repeated$Intensity <- c("High", "Medium", "All")
+baseline_repeated$Method <- "Baseline"
+
+# Remove original baseline and add repeated baseline
+plot_data <- rbind(
+  threshold_counts_final[
+    threshold_counts_final$Scenario_final != "baseline",
+  ],
+  baseline_repeated
+)
+
+# Set order of panels
+plot_data$Intensity <- factor(
+  plot_data$Intensity,
+  levels = c("High", "Medium", "All")
+)
+
+# Set order of bars
+plot_data$Method <- factor(
+  plot_data$Method,
+  levels = c(
+    "Baseline",
+    "Control (OD matched)",
+    "Out-degree",
+    "Control (BT matched)",
+    "Betweenness"
+  )
+)
+```
+
+Plot figure
+
+```{r, fig.width = 12, fig.height = 4}
+# plot probability of sustained outbreak by intensity
+
+# order of windows
+threshold_counts_final$Intensity <- factor(
+  threshold_counts_final$Intensity,
+  levels = c("Baseline", "High", "Medium", "All")
+)
+ggplot(
+  plot_data,
+  aes(x = Method,
+      y = Proportion_final,
+      fill = Method)
+) +
+  geom_col(position = "dodge") +
+  facet_wrap(~Intensity) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Intervention strategy",
+    y = "Probability of sustained outbreak (≥10 infected farms)"
+  ) +
+  theme_bw()
+```
+
+Relative Reduction
+
+```{r}
+# Duplicate baseline into each intensity panel for relative reduction plot
+
+baseline_reduction <- threshold_counts_final[
+  threshold_counts_final$Scenario_final == "baseline",
+]
+
+baseline_reduction <- baseline_reduction[rep(1, 3), ]
+
+baseline_reduction$Intensity <- c("High", "Medium", "All")
+baseline_reduction$Method <- "Baseline"
+baseline_reduction$Relative_reduction <- 0
+
+
+# Remove original baseline and add repeated baseline
+plot_reduction <- rbind(
+  threshold_counts_final[
+    threshold_counts_final$Scenario_final != "baseline",
+  ],
+  baseline_reduction
+)
+
+
+# Set panel order
+plot_reduction$Intensity <- factor(
+  plot_reduction$Intensity,
+  levels = c("High", "Medium", "All")
+)
+
+
+# Set bar order
+plot_reduction$Method <- factor(
+  plot_reduction$Method,
+  levels = c(
+    "Baseline",
+    "Control (OD matched)",
+    "Out-degree",
+    "Control (BT matched)",
+    "Betweenness"
+  )
+)
+```
+```{r, fig.width=12, fig.height=4}
+# plot relative reduction by intensity
+
+# order of windows
+#threshold_counts_final$Intensity <- factor(
+  #threshold_counts_final$Intensity,
+  #levels = c("High", "Medium", "All")
+#)
+
+ggplot(
+  plot_reduction,
+  aes(x = Method,
+      y = Relative_reduction,
+      fill = Method)
+) +
+  geom_col(position = "dodge") +
+  facet_wrap(~Intensity) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = "Intervention strategy",
+    y = "Relative outbreak reduction vs baseline"
+  ) +
+  theme_bw()
+```
+
+Paired fishers tests
+
+# RESULT 2
+
+if an epidemic becomes established (threshold >= 10), how large does it become/how many farms are infected?
+
+Report - Median, IQR, % reduction relative to baseline
+
+Filter established outbreaks:
+```{r}
+# filter simulations above threshold - keep sims where finout outbreak size >= 10
+
+threshold_final <- 10
+
+established_outbreaks <- lapply(
+  sustained_trans,
+  function(x) x[x >= threshold_final]
+)
+```
+```{r}
+# create a dataframe for plotting
+
+plot_sizes <- stack(established_outbreaks)
+colnames(plot_sizes) <- c("Final_size", "Scenario")
+
+# final_size= final number of infected farms
+# scenario = intervention scenario
+```
+```{r}
+# add intervention method & intensity
+plot_sizes <- merge(
+  plot_sizes,
+  threshold_counts_final[, c("Scenario_final", "Method", "Intensity")],
+  by.x = "Scenario",
+  by.y = "Scenario_final"
+)
+plot_sizes_stats <- plot_sizes # save a copy before duplication for stat analysis without baseline x3
+```
+Baseline duplication - needed for faceted figure of panels
+
+```{r}
+# duplicate baseline into every intensity panel
+
+# extract baseline
+baseline_sizes <- subset(plot_sizes, Scenario == "baseline")
+```
+```{r}
+# duplicate baseline
+baseline_sizes <- do.call(
+  rbind,
+  lapply(c("High", "Medium", "All"), function(i) {
+    x <- baseline_sizes
+    x$Intensity <- i
+    x
+  })
+)
+
+baseline_sizes$Method <- "Baseline"
+```
+```{r}
+# remove original baseline & add duplicated baseline
+plot_sizes <- rbind(
+  subset(plot_sizes, Scenario != "baseline"),
+  baseline_sizes
+)
+```
+Set plotting order
+
+```{r}
+# set plotting order
+plot_sizes$Intensity <- factor(
+  plot_sizes$Intensity,
+  levels = c("High", "Medium", "All")
+)
+
+plot_sizes$Method <- factor(
+  plot_sizes$Method,
+  levels = c(
+    "Baseline",
+    "Control (OD matched)",
+    "Out-degree",
+    "Control (BT matched)",
+    "Betweenness"
+  )
+)
+```
+Boxplot
+
+```{r}
+# create boxplots
+
+ggplot(
+  plot_sizes,
+  aes(
+    x = Method,
+    y = Final_size,
+    fill = Method
+  )
+) +
+  geom_boxplot() +
+  facet_wrap(~Intensity) +
+  labs(
+    x = "Intervention strategy",
+    y = "Final outbreak size (established outbreaks only)"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+```
+Descriptive summary - median/IQR/mean etc
+
+```{r}
+# summarise outbreak sizes
+
+outbreak_summary <- data.frame(
+  Scenario = names(established_outbreaks),
+  N = sapply(established_outbreaks, length), # how many sims exceeded threshold
+  Mean = sapply(established_outbreaks, mean), # average final outbreak size
+  Median = sapply(established_outbreaks, median), # median final outbreak size
+  SD = sapply(established_outbreaks, sd), # variability/standard deviation
+  Min = sapply(established_outbreaks, min), # range
+  Max = sapply(established_outbreaks, max) # range
+)
+
+outbreak_summary
+```
+
+STATS - poissons distribution
+
+Visualise distributions - show that final outbreak sizes are not normally distributed - ?right skewed
+
+```{r}
+# histogram of outbreak sizes
+ggplot(plot_sizes_stats,
+       aes(x = Final_size)) +
+  geom_histogram(
+    bins = 30,
+    fill = "steelblue",
+    colour = "black"
+  ) +
+  facet_wrap(~Method) +
+  labs(
+    x = "Final outbreak size (established outbreaks only)",
+    y = "Number of simulations"
+  ) +
+  theme_bw()
+```
+
+
+# RESULT 3
+c) peak infectious farms - how intense is outbreak IF THERE IS AN OUTBREAK - explain as above - mean/median peak without <1 sims
+
+When an epidemic occurs (threshold >=10 farms), how intense is it?
+
+Only analyse successful epidemics
+
+Calculate peak infectious farms for every replicate
+
+```{r}
+# calculate peak infectious farms for every simulation = max number of infectious farms reached in each simulation
+peak_infectious <- lapply(
+  daily_results,
+  function(x) {
+    x %>%
+      group_by(replicate) %>%
+      summarise(
+        peak_infectious = max(infectious)
+      )
+  }
+)
+```
+Restrict to established epidemics
+
+```{r}
+# keep sims where threshold transmission occured
+# create dataframe with replicate/peak_inefctious/scenario
+
+peak_infectious_established <- lapply(
+  names(peak_infectious),
+  function(scenario) {
+    
+    peaks <- peak_infectious[[scenario]]
+    
+    established <- summary_results[[scenario]] %>%
+      filter(final_infected >= threshold_final) %>%
+      select(replicate)
+    
+    peaks %>%
+      filter(replicate %in% established$replicate) %>%
+      mutate(Scenario = scenario)
+  }
+)
+
+peak_infectious_established <- bind_rows(peak_infectious_established)
+```
+
+Create scenario look-up
+
+```{r}
+# create look up table to to map simulation names to scenario labels
+
+scenario_lookup <- data.frame(
+  Scenario = c(
+    "SC1", "SC2", "SC3", "SC4", "SC5", "SC6", "SC7", "SC14", "SC15", "SC16", "SC17", "SC18", "SC19"
+  ),
+  Scenario_final = c(
+    "baseline",  "OD_high", "OD_med", "OD_all", "BT_high", "BT_med", "BT_all", "CT_OD_HIGH", "CT_OD_MED", "CT_OD_ALL", "CT_BT_HIGH", "CT_BT_MED","CT_BT_ALL"
+  )
+)
+```
+
+Add method/intensity labels
+
+```{r}
+# add method & intensity labels
+peak_infectious_established <- merge(
+  peak_infectious_established,
+  scenario_lookup,
+  by = "Scenario"
+)
+
+peak_infectious_established <- merge(
+  peak_infectious_established,
+  threshold_counts_final[, c("Scenario_final", "Method", "Intensity")],
+  by = "Scenario_final"
+)
+
+peak_infectious_stats <- peak_infectious_established # create copy for stats
+```
+Create the plotting copy
+
+```{r}
+#make separate copy for figures
+peak_infectious_plot <- peak_infectious_established
+
+nrow(peak_infectious_plot)
+# lower because has dropped scenarios 8-13
+```
+Duplicate baseline for the three intensity panels
+
+```{r}
+# duplicate baseline so appears in all 3 panels
+
+# extract basline peak infecitous values
+baseline_peak <- subset(
+  peak_infectious_plot,
+  Method == "Baseline"
+)
+
+# Duplicate baseline into each intensity panel
+baseline_peak <- baseline_peak[
+  rep(1:nrow(baseline_peak), 3),
+]
+
+# assign intensity labels
+baseline_peak$Intensity <- rep(
+  c("High", "Medium", "All"),
+  each = nrow(baseline_peak) / 3
+)
+
+# keep baseline label
+baseline_peak$Method <- "Baseline"
+```
+```{r}
+# remove original baseline and add duplicated baseline back
+peak_infectious_plot <- rbind(
+  subset(peak_infectious_plot, Method != "Baseline"),
+  baseline_peak
+)
+```
+Set plotting order
+
+```{r}
+# set plotting order
+peak_infectious_plot$Intensity <- factor(
+  peak_infectious_plot$Intensity,
+  levels = c("High", "Medium", "All")
+)
+
+peak_infectious_plot$Method <- factor(
+  peak_infectious_plot$Method,
+  levels = c("Baseline", "Control (OD matched)",
+             "Out-degree",
+             "Control (BT matched)",
+             "Betweenness"
+             )
+)
+```
+Final boxplot
+
+```{r}
+# plot
+ggplot(
+  peak_infectious_plot,
+  aes(
+    x = Method,
+    y = peak_infectious,
+    fill = Method
+  )
+) +
+  geom_boxplot() +
+  facet_wrap(~Intensity) +
+  labs(
+    x = "Intervention strategy",
+    y = "Peak infectious farms (established outbreaks only)"
+  )+
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+Non parametric distribution/densities - stat test choices
+Show densitiies non-parametric
+
+```{r}
+# density plots
+ggplot(peak_infectious_plot,
+       aes(x = peak_infectious,
+           colour = Method,
+           fill = Method)) +
+  geom_density(alpha = 0.2) +
+  facet_wrap(~Intensity) +
+  labs(
+    x = "Peak infectious size (established outbreaks only)",
+    y = "Density"
+  ) +
+  theme_bw()
+```
+
+Stats - poissons distribution
+
+
