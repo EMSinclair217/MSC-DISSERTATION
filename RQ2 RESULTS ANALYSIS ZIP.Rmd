@@ -24,21 +24,625 @@ Import results of simulations for anlysis (RQ2 SOIR SIMS)
 
 
 ```{r}
+# Baseline
 scenario_1_results <- readRDS("scenario_1_results.rds") # baseline
+
+# Interventions
 scenario_2_results <- readRDS("scenario_2_results.rds") # Outdegree (high) >= 8 months
 scenario_3_results <- readRDS("scenario_3_results.rds") # Outdegree (med) >= 6 months
 scenario_4_results <- readRDS("scenario_4_results.rds") # Outdegree any month
 scenario_5_results <- readRDS("scenario_5_results_corrected.rds") # Betweenness (high) >= 6 months
 scenario_6_results <- readRDS("scenario_6_results_corrected.rds") # Betweenness (med) >= 4 months
 scenario_7_results <- readRDS("scenario_7_results_corrected.rds") # Betweenness any month
-
-scenario_14_results <- readRDS("scenario_14_results.rds") # OD HIGH CONTROL (5 removed)
-scenario_15_results <- readRDS("scenario_15_results.rds") # OD MED CONTROL (8 removed)
-scenario_16_results <- readRDS("scenario_16_results.rds") # OD ALL CONTROL (43 removed)
-scenario_17_results <- readRDS("scenario_17_results_corrected.rds") # BT HIGH CONTROL (1 removed)
-scenario_18_results <- readRDS("scenario_18_results_corrected.rds") # BT MED CONTROL (8 removed)
-scenario_19_results <- readRDS("scenario_19_results_corrected.rds") # BT ALL CONTROL (35 removed)
 ```
+```{r}
+# Matched controls - Scenario 8: Control OD HIGH x10 (5 random farms removed)
+scenario_8a_results <- readRDS("scenario_8P_control_1_results.rds")
+scenario_8b_results <- readRDS("scenario_8P_control_2_results.rds")
+scenario_8c_results <- readRDS("scenario_8P_control_3_results.rds")
+scenario_8d_results <- readRDS("scenario_8P_control_4_results.rds")
+scenario_8e_results <- readRDS("scenario_8P_control_5_results.rds")
+scenario_8f_results <- readRDS("scenario_8P_control_6_results.rds")
+scenario_8g_results <- readRDS("scenario_8P_control_7_results.rds")
+scenario_8h_results <- readRDS("scenario_8P_control_8_results.rds")
+scenario_8i_results <- readRDS("scenario_8P_control_9_results.rds")
+scenario_8j_results <- readRDS("scenario_8P_control_10_results.rds")
+  
+```  
+```{r}
+# list of 2,000 simulation replicates & summary dataframe with each replicate
+#class(scenario_8a_results)
+#str(scenario_8a_results)
+```
+```{r}
+# Matched controls - Scenario 9 Control OD Med x10, (random removal of 8 farms)
+scenario_9a_results <- readRDS("scenario_9P_control_1_results.rds")
+scenario_9b_results <- readRDS("scenario_9P_control_2_results.rds")
+scenario_9c_results <- readRDS("scenario_9P_control_3_results.rds")
+scenario_9d_results <- readRDS("scenario_9P_control_4_results.rds")
+scenario_9e_results <- readRDS("scenario_9P_control_5_results.rds")
+scenario_9f_results <- readRDS("scenario_9P_control_6_results.rds")
+scenario_9g_results <- readRDS("scenario_9P_control_7_results.rds")
+scenario_9h_results <- readRDS("scenario_9P_control_8_results.rds")
+scenario_9i_results <- readRDS("scenario_9P_control_9_results.rds")
+scenario_9j_results <- readRDS("scenario_9P_control_10_results.rds")
+```
+```{r}
+# Matched controls - Scenario 10 Control OD all x10, (random removal of 43 farms)
+scenario_10a_results <- readRDS("scenario_10P_control_1_results.rds")
+scenario_10b_results <- readRDS("scenario_10P_control_2_results.rds")
+scenario_10c_results <- readRDS("scenario_10P_control_3_results.rds")
+scenario_10d_results <- readRDS("scenario_10P_control_4_results.rds")
+scenario_10e_results <- readRDS("scenario_10P_control_5_results.rds")
+scenario_10f_results <- readRDS("scenario_10P_control_6_results.rds")
+scenario_10g_results <- readRDS("scenario_10P_control_7_results.rds")
+scenario_10h_results <- readRDS("scenario_10P_control_8_results.rds")
+scenario_10i_results <- readRDS("scenario_10P_control_9_results.rds")
+scenario_10j_results <- readRDS("scenario_10P_control_10_results.rds")
+```
+```{r}
+# Matched controls - Scenario 11 Control BT High x10, (random removal of 1 farms)
+scenario_11a_results <- readRDS("scenario_11P_control_1_results.rds")
+scenario_11b_results <- readRDS("scenario_11P_control_2_results.rds")
+scenario_11c_results <- readRDS("scenario_11P_control_3_results.rds")
+scenario_11d_results <- readRDS("scenario_11P_control_4_results.rds")
+scenario_11e_results <- readRDS("scenario_11P_control_5_results.rds")
+scenario_11f_results <- readRDS("scenario_11P_control_6_results.rds")
+scenario_11g_results <- readRDS("scenario_11P_control_7_results.rds")
+scenario_11h_results <- readRDS("scenario_11P_control_8_results.rds")
+scenario_11i_results <- readRDS("scenario_11P_control_9_results.rds")
+scenario_11j_results <- readRDS("scenario_11P_control_10_results.rds")
+```
+```{r}
+# Matched controls - Scenario 12 Control BT Med x10, (random removal of 18 farms)
+scenario_12a_results <- readRDS("scenario_12P_control_1_results.rds")
+scenario_12b_results <- readRDS("scenario_12P_control_2_results.rds")
+scenario_12c_results <- readRDS("scenario_12P_control_3_results.rds")
+scenario_12d_results <- readRDS("scenario_12P_control_4_results.rds")
+scenario_12e_results <- readRDS("scenario_12P_control_5_results.rds")
+scenario_12f_results <- readRDS("scenario_12P_control_6_results.rds")
+scenario_12g_results <- readRDS("scenario_12P_control_7_results.rds")
+scenario_12h_results <- readRDS("scenario_12P_control_8_results.rds")
+scenario_12i_results <- readRDS("scenario_12P_control_9_results.rds")
+scenario_12j_results <- readRDS("scenario_12P_control_10_results.rds")
+```
+```{r}
+# Matched controls - Scenario 13 Control BT All x10, (random removal of 35 farms)
+scenario_13a_results <- readRDS("scenario_13P_control_1_results.rds")
+scenario_13b_results <- readRDS("scenario_13P_control_2_results.rds")
+scenario_13c_results <- readRDS("scenario_13P_control_3_results.rds")
+scenario_13d_results <- readRDS("scenario_13P_control_4_results.rds")
+scenario_13e_results <- readRDS("scenario_13P_control_5_results.rds")
+scenario_13f_results <- readRDS("scenario_13P_control_6_results.rds")
+scenario_13g_results <- readRDS("scenario_13P_control_7_results.rds")
+scenario_13h_results <- readRDS("scenario_13P_control_8_results.rds")
+scenario_13i_results <- readRDS("scenario_13P_control_9_results.rds")
+scenario_13j_results <- readRDS("scenario_13P_control_10_results.rds")
+```
+  
+# Pooled control & between-control variation
+
+pooled control - 20,000 stochastic outcomes - gives the matched control estimate (median/mean/IQR)
+between-control variation - 10 separate 2000-run simulations - demonstrates that the pooled result is reasonably consitent across the random farms selected
+
+```{r}
+# SCENARIO 8
+# pool the 20,000 outcomes
+
+control_8_results_pooled <- list(
+  scenario_8a_results,
+  scenario_8b_results,
+  scenario_8c_results,
+  scenario_8d_results,
+  scenario_8e_results,
+  scenario_8f_results,
+  scenario_8g_results,
+  scenario_8h_results,
+  scenario_8i_results,
+  scenario_8j_results
+)
+
+control_8_finalsizes <- unlist(
+  lapply(control_8_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$final_infected)
+  })
+)
+
+control_8_peakinfectious <- unlist(
+  lapply(control_8_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+
+```{r}
+length(control_8_finalsizes)
+```
+```{r}
+# pooled summary
+
+control_8_summary_pooled <- data.frame(
+  N = length(control_8_finalsizes),
+  Mean = mean(control_8_finalsizes),
+  Median = median(control_8_finalsizes),
+  IQR = IQR(control_8_finalsizes),
+  SD = sd(control_8_finalsizes),
+  Min = min(control_8_finalsizes),
+  Max = max(control_8_finalsizes)
+)
+
+control_8_summary_pooled
+```
+```{r}
+# show isnt driven by one random control - calculate the summary repeatedly for each of the 10 controls
+
+control_8_variance <- do.call(
+  rbind,
+  lapply(seq_along(control_8_results_pooled), function(i) {
+    
+    x <- sapply(
+      control_8_results_pooled[[i]],
+      function(j) j$summary$final_infected
+    )
+    
+    data.frame(
+      Control = i,
+      Mean = mean(x),
+      Median = median(x),
+      IQR = IQR(x)
+    )
+  })
+)
+
+control_8_variance
+```
+```{r}
+ggplot(control_8_variance, aes(x = Control, y = Mean)) +
+  geom_point(size = 3) +
+  geom_hline(
+    yintercept = control_8_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 8: variation in mean final outbreak size",
+    x = "Random control simulation",
+    y = "Mean final outbreak size"
+  )
+```
+State - across the ten random control configurations, the median final outbreak size was 1 (IQR= 0) in all configurations, while mean oubtreak sizes were also similar, indicating limited variation between random control configurations - APPENDIX
+
+```{r}
+# SCENARIO 9
+# pool the 20,000 outcomes
+
+control_9_results_pooled <- list(
+  scenario_9a_results,
+  scenario_9b_results,
+  scenario_9c_results,
+  scenario_9d_results,
+  scenario_9e_results,
+  scenario_9f_results,
+  scenario_9g_results,
+  scenario_9h_results,
+  scenario_9i_results,
+  scenario_9j_results
+)
+
+control_9_finalsizes <- unlist(
+  lapply(control_9_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$final_infected)
+  })
+)
+
+control_9_peakinfectious <- unlist(
+  lapply(control_9_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+
+```{r}
+length(control_9_finalsizes)
+```
+```{r}
+# pooled summary
+
+control_9_summary_pooled <- data.frame(
+  N = length(control_9_finalsizes),
+  Mean = mean(control_9_finalsizes),
+  Median = median(control_9_finalsizes),
+  IQR = IQR(control_9_finalsizes),
+  SD = sd(control_9_finalsizes),
+  Min = min(control_9_finalsizes),
+  Max = max(control_9_finalsizes)
+)
+
+control_9_summary_pooled
+```
+```{r}
+# show isnt driven by one random control - calculate the summary repeatedly for each of the 10 controls
+
+control_9_variance <- do.call(
+  rbind,
+  lapply(seq_along(control_9_results_pooled), function(i) {
+    
+    x <- sapply(
+      control_9_results_pooled[[i]],
+      function(j) j$summary$final_infected
+    )
+    
+    data.frame(
+      Control = i,
+      Mean = mean(x),
+      Median = median(x),
+      IQR = IQR(x)
+    )
+  })
+)
+
+control_9_variance
+```
+```{r}
+ggplot(control_9_variance, aes(x = Control, y = Mean)) +
+  geom_point(size = 3) +
+  geom_hline(
+    yintercept = control_9_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 9: variation in mean final outbreak size",
+    x = "Random control simulation",
+    y = "Mean final outbreak size"
+  )
+```
+
+
+```{r}
+# SCENARIO 10
+# pool the 20,000 outcomes
+
+control_10_results_pooled <- list(
+  scenario_10a_results,
+  scenario_10b_results,
+  scenario_10c_results,
+  scenario_10d_results,
+  scenario_10e_results,
+  scenario_10f_results,
+  scenario_10g_results,
+  scenario_10h_results,
+  scenario_10i_results,
+  scenario_10j_results
+)
+
+control_10_finalsizes <- unlist(
+  lapply(control_10_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$final_infected)
+  })
+)
+
+control_10_peakinfectious <- unlist(
+  lapply(control_10_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+
+```{r}
+length(control_10_finalsizes)
+```
+```{r}
+# pooled summary
+
+control_10_summary_pooled <- data.frame(
+  N = length(control_10_finalsizes),
+  Mean = mean(control_10_finalsizes),
+  Median = median(control_10_finalsizes),
+  IQR = IQR(control_10_finalsizes),
+  SD = sd(control_10_finalsizes),
+  Min = min(control_10_finalsizes),
+  Max = max(control_10_finalsizes)
+)
+
+control_10_summary_pooled
+```
+```{r}
+# show isnt driven by one random control - calculate the summary repeatedly for each of the 10 controls
+
+control_10_variance <- do.call(
+  rbind,
+  lapply(seq_along(control_10_results_pooled), function(i) {
+    
+    x <- sapply(
+      control_10_results_pooled[[i]],
+      function(j) j$summary$final_infected
+    )
+    
+    data.frame(
+      Control = i,
+      Mean = mean(x),
+      Median = median(x),
+      IQR = IQR(x)
+    )
+  })
+)
+
+control_10_variance
+```
+```{r}
+ggplot(control_10_variance, aes(x = Control, y = Mean)) +
+  geom_point(size = 3) +
+  geom_hline(
+    yintercept = control_10_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 10: variation in mean final outbreak size",
+    x = "Random control simulation",
+    y = "Mean final outbreak size"
+  )
+```
+
+```{r}
+# SCENARIO 11
+# pool the 20,000 outcomes
+
+control_11_results_pooled <- list(
+  scenario_11a_results,
+  scenario_11b_results,
+  scenario_11c_results,
+  scenario_11d_results,
+  scenario_11e_results,
+  scenario_11f_results,
+  scenario_11g_results,
+  scenario_11h_results,
+  scenario_11i_results,
+  scenario_11j_results
+)
+
+control_11_finalsizes <- unlist(
+  lapply(control_11_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$final_infected)
+  })
+)
+
+control_11_peakinfectious <- unlist(
+  lapply(control_11_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+
+```{r}
+length(control_11_finalsizes)
+```
+```{r}
+# pooled summary
+
+control_11_summary_pooled <- data.frame(
+  N = length(control_11_finalsizes),
+  Mean = mean(control_11_finalsizes),
+  Median = median(control_11_finalsizes),
+  IQR = IQR(control_11_finalsizes),
+  SD = sd(control_11_finalsizes),
+  Min = min(control_11_finalsizes),
+  Max = max(control_11_finalsizes)
+)
+
+control_11_summary_pooled
+```
+```{r}
+# show isnt driven by one random control - calculate the summary repeatedly for each of the 10 controls
+
+control_11_variance <- do.call(
+  rbind,
+  lapply(seq_along(control_11_results_pooled), function(i) {
+    
+    x <- sapply(
+      control_11_results_pooled[[i]],
+      function(j) j$summary$final_infected
+    )
+    
+    data.frame(
+      Control = i,
+      Mean = mean(x),
+      Median = median(x),
+      IQR = IQR(x)
+    )
+  })
+)
+
+control_11_variance
+```
+```{r}
+ggplot(control_11_variance, aes(x = Control, y = Mean)) +
+  geom_point(size = 3) +
+  geom_hline(
+    yintercept = control_11_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 11: variation in mean final outbreak size",
+    x = "Random control simulation",
+    y = "Mean final outbreak size"
+  )
+```
+
+```{r}
+# SCENARIO 12
+# pool the 20,000 outcomes
+
+control_12_results_pooled <- list(
+  scenario_12a_results,
+  scenario_12b_results,
+  scenario_12c_results,
+  scenario_12d_results,
+  scenario_12e_results,
+  scenario_12f_results,
+  scenario_12g_results,
+  scenario_12h_results,
+  scenario_12i_results,
+  scenario_12j_results
+)
+
+control_12_finalsizes <- unlist(
+  lapply(control_12_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$final_infected)
+  })
+)
+
+control_12_peakinfectious <- unlist(
+  lapply(control_12_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+
+```{r}
+length(control_12_finalsizes)
+```
+```{r}
+# pooled summary
+
+control_12_summary_pooled <- data.frame(
+  N = length(control_12_finalsizes),
+  Mean = mean(control_12_finalsizes),
+  Median = median(control_12_finalsizes),
+  IQR = IQR(control_12_finalsizes),
+  SD = sd(control_12_finalsizes),
+  Min = min(control_12_finalsizes),
+  Max = max(control_12_finalsizes)
+)
+
+control_12_summary_pooled
+```
+```{r}
+# show isnt driven by one random control - calculate the summary repeatedly for each of the 10 controls
+
+control_12_variance <- do.call(
+  rbind,
+  lapply(seq_along(control_12_results_pooled), function(i) {
+    
+    x <- sapply(
+      control_12_results_pooled[[i]],
+      function(j) j$summary$final_infected
+    )
+    
+    data.frame(
+      Control = i,
+      Mean = mean(x),
+      Median = median(x),
+      IQR = IQR(x)
+    )
+  })
+)
+
+control_12_variance
+```
+```{r}
+ggplot(control_12_variance, aes(x = Control, y = Mean)) +
+  geom_point(size = 3) +
+  geom_hline(
+    yintercept = control_12_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 12: variation in mean final outbreak size",
+    x = "Random control simulation",
+    y = "Mean final outbreak size"
+  )
+```
+
+```{r}
+# SCENARIO 13
+# pool the 20,000 outcomes
+
+control_13_results_pooled <- list(
+  scenario_13a_results,
+  scenario_13b_results,
+  scenario_13c_results,
+  scenario_13d_results,
+  scenario_13e_results,
+  scenario_13f_results,
+  scenario_13g_results,
+  scenario_13h_results,
+  scenario_13i_results,
+  scenario_13j_results
+)
+
+control_13_finalsizes <- unlist(
+  lapply(control_13_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$final_infected)
+  })
+)
+
+control_13_peakinfectious <- unlist(
+  lapply(control_13_results_pooled, function(x) {
+    sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+
+```{r}
+length(control_13_finalsizes)
+```
+```{r}
+# pooled summary
+
+control_13_summary_pooled <- data.frame(
+  N = length(control_13_finalsizes),
+  Mean = mean(control_13_finalsizes),
+  Median = median(control_13_finalsizes),
+  IQR = IQR(control_13_finalsizes),
+  SD = sd(control_13_finalsizes),
+  Min = min(control_13_finalsizes),
+  Max = max(control_13_finalsizes)
+)
+
+control_13_summary_pooled
+```
+```{r}
+# show isnt driven by one random control - calculate the summary repeatedly for each of the 10 controls
+
+control_13_variance <- do.call(
+  rbind,
+  lapply(seq_along(control_13_results_pooled), function(i) {
+    
+    x <- sapply(
+      control_13_results_pooled[[i]],
+      function(j) j$summary$final_infected
+    )
+    
+    data.frame(
+      Control = i,
+      Mean = mean(x),
+      Median = median(x),
+      IQR = IQR(x)
+    )
+  })
+)
+
+control_13_variance
+```
+```{r}
+ggplot(control_13_variance, aes(x = Control, y = Mean)) +
+  geom_point(size = 3) +
+  geom_hline(
+    yintercept = control_13_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 13: variation in mean final outbreak size",
+    x = "Random control simulation",
+    y = "Mean final outbreak size"
+  )
+```
+
 ```{r}
 # combine the daily outputs from all 2000 sim replicates into one data frame
 
@@ -60,13 +664,7 @@ all_scenarios <- list(
   SC4 = scenario_4_results,
   SC5 = scenario_5_results,
   SC6 = scenario_6_results,
-  SC7 = scenario_7_results,
-  SC14 = scenario_14_results,
-  SC15 = scenario_15_results,
-  SC16 = scenario_16_results,
-  SC17 = scenario_17_results,
-  SC18 = scenario_18_results,
-  SC19 = scenario_19_results
+  SC7 = scenario_7_results
 )
 
 # Create empty lists to store outputs
@@ -139,18 +737,12 @@ scenario_table <- data.frame(
     "(5)",
     "(6)",
     "(7)",
-    #"(8)",
-    #"(9)",
-    #"(10)",
-    #"(11)",
-    #"(12)",
-    #"(13)",
-    "(14)",
-    "(15)",
-    "(16)",
-    "(17)",
-    "(18)",
-    "(19)"
+    "(8)",
+    "(9)",
+    "(10)",
+    "(11)",
+    "(12)",
+    "(13)"
   ),
   
   Type = c(
@@ -161,18 +753,12 @@ scenario_table <- data.frame(
     "Targeted Intervention",
     "Targeted Intervention",
     "Targeted Intervention",
-    #"Targeted Intervention",
-    #"Targeted Intervention",
-    #"Targeted Intervention",
-    #"Random removal control",
-    #"Random removal control",
-    #"Random removal control",
-    "CONTROL OD HIGH",
-    "CONTROL OD MED",
-    "CONTROL OD ALL",
-    "CONTROL BT HIGH",
-    "CONTROL BT MED",
-    "CONTROL BT ALL"
+    "CONTROL POOLED OD HIGH",
+    "CONTROL POOLED OD MED",
+    "CONTROL POOLED OD ALL",
+    "CONTROL POOLED BT HIGH",
+    "CONTROL POOLED BT MED",
+    "CONTROL POOLED BT ALL"
   ),
   
   Centrality = c(
@@ -183,12 +769,6 @@ scenario_table <- data.frame(
     "Betweenness",
     "Betweenness",
     "Betweenness",
-    #"Combined",
-    #"Combined",
-   # "Combined",
-   # "Random",
-   # "Random",
-   # "Random",
     "RandomOD",
     "RandomOD",
     "RandomOD",
@@ -205,12 +785,6 @@ scenario_table <- data.frame(
     "High >=6 months",
     "Medium >=4 months",
     ">= 1 month",
-   # "High BT >=6 AND OD >=8 months",
-    #"Medium BT >=4 AND OD>=6 months",
-    #">=1 month",
-   # "Matched to 'high' candidates",
-   # "Matched to 'medium' candidates",
-   # "Matched to 'all' candidates",
     "Matched to OD HIGH",
     "Matched to OD MED",
     "Matched to OD ALL",
@@ -226,12 +800,6 @@ scenario_table <- data.frame(
     length(BT_high_candidates),
     length(BT_med_candidates),
     length(BT_all_candidates),
-    #length(CB_high_candidates),
-    #length(CB_med_candidates),
-    #length(CB_all_candidates),
-    #4,
-    #9,
-    #40,
     5,
     8,
     43,
@@ -248,12 +816,6 @@ scenario_table <- data.frame(
     length(BT_high_candidates)/total_farms*100,
     length(BT_med_candidates)/total_farms*100,
     length(BT_all_candidates)/total_farms*100,
-    #length(CB_high_candidates)/total_farms*100,
-    #length(CB_med_candidates)/total_farms*100,
-    #length(CB_all_candidates)/total_farms*100,
-    #4/total_farms*100,
-    #9/total_farms*100,
-    #40/total_farms*100,
     5/total_farms*100,
     8/total_farms*100,
     43/total_farms*100,
@@ -956,6 +1518,8 @@ outbreak_summary
 ```
 
 STATS - poissons distribution
+
+https://r-coder.com/poisson-distribution-r/
 
 Visualise distributions - show that final outbreak sizes are not normally distributed - ?right skewed
 

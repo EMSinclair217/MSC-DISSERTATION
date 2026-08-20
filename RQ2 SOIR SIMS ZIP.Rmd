@@ -465,7 +465,7 @@ OD_high_candidates <- readRDS(
 ```
 
 ```{r}
-head(OD_all_candidates)
+#head(OD_all_candidates)
 ```
 
 ```{r}
@@ -530,8 +530,8 @@ Change this to only scenarios used, add pooled controls, match to table in disse
 scenario_1 <- movements
 ```
 ```{r}
-dim(scenario_1)
-length(unique(c(scenario_1$source, scenario_1$destination))) # number of nodes
+#dim(scenario_1)
+#length(unique(c(scenario_1$source, scenario_1$destination))) # number of nodes
 ```
 ```{r}
 # SCENARIO 2 - Outdegree >= 8 months
@@ -543,14 +543,14 @@ scenario_2 <- movements %>%
 ```
 ```{r}
 # debug
-sum(is.na(scenario_2$source))
-sum(is.na(scenario_2$destination))
+#sum(is.na(scenario_2$source))
+#sum(is.na(scenario_2$destination))
 ```
 ```{r}
 # check worked & df
-any(OD_high_candidates %in% scenario_2$source)
-any(OD_high_candidates %in% scenario_2$destination)
-class(scenario_2)
+#any(OD_high_candidates %in% scenario_2$source)
+#any(OD_high_candidates %in% scenario_2$destination)
+#class(scenario_2)
 ```
 ```{r}
 # SCENARIO 3 - Outdegree >= 6 months
@@ -562,9 +562,9 @@ scenario_3 <- movements %>%
 ```
 ```{r}
 # check worked & df
-any(OD_med_candidates %in% scenario_3$source)
-any(OD_med_candidates %in% scenario_3$destination)
-class(scenario_3)
+#any(OD_med_candidates %in% scenario_3$source)
+#any(OD_med_candidates %in% scenario_3$destination)
+#class(scenario_3)
 ```
 ```{r}
 # SCENARIO 4 - Outdegree any months
@@ -576,9 +576,9 @@ scenario_4 <- movements %>%
 ```
 ```{r}
 # check worked & df
-any(OD_all_candidates %in% scenario_4$source)
-any(OD_all_candidates %in% scenario_4$destination)
-class(scenario_4)
+#any(OD_all_candidates %in% scenario_4$source)
+#any(OD_all_candidates %in% scenario_4$destination)
+#class(scenario_4)
 ```
 ```{r}
 # SCENARIO 5 - Betweeness >= 6 months
@@ -590,9 +590,9 @@ scenario_5 <- movements %>%
 ```
 ```{r}
 # check worked & df
-any(BT_high_candidates %in% scenario_5$source)
-any(BT_high_candidates %in% scenario_5$destination)
-class(scenario_5)
+#any(BT_high_candidates %in% scenario_5$source)
+#any(BT_high_candidates %in% scenario_5$destination)
+#class(scenario_5)
 ```
 ```{r}
 # SCENARIO 6 - Betweeness >= 4 months
@@ -604,9 +604,9 @@ scenario_6 <- movements %>%
 ```
 ```{r}
 # check worked & df
-any(BT_med_candidates %in% scenario_6$source)
-any(BT_med_candidates %in% scenario_6$destination)
-class(scenario_6)
+#any(BT_med_candidates %in% scenario_6$source)
+#any(BT_med_candidates %in% scenario_6$destination)
+#class(scenario_6)
 ```
 ```{r}
 # SCENARIO 7 - Betweeness any months
@@ -618,132 +618,23 @@ scenario_7 <- movements %>%
 ```
 ```{r}
 # check worked & df
-any(BT_all_candidates %in% scenario_7$source)
-any(BT_all_candidates %in% scenario_7$destination)
-class(scenario_7)
+#any(BT_all_candidates %in% scenario_7$source)
+#any(BT_all_candidates %in% scenario_7$destination)
+#class(scenario_7)
 ```
-```{r}
-# SCENARIO 8 - Combined BT >= 6 months & OD >= 8 months
-scenario_8 <- movements %>%
-  filter(
-    !(source %in% CB_high_candidates),
-    !(destination %in% CB_high_candidates)
-  )
-```
-```{r}
-# check worked & df
-any(CB_high_candidates %in% scenario_8$source)
-any(CB_high_candidates %in% scenario_8$destination)
-class(scenario_8)
-length(scenario_8)
-```
-```{r}
-# SCENARIO 9 - Combined BT>= 4 months & 0D >= 6 months
-scenario_9 <- movements %>%
-  filter(
-    !(source %in% CB_med_candidates),
-    !(destination %in% CB_med_candidates)
-  )
-```
-```{r}
-# check worked & df
-any(CB_med_candidates %in% scenario_9$source)
-any(CB_med_candidates %in% scenario_9$destination)
-class(scenario_9)
-dim(scenario_9)
-```
-```{r}
-# SCENARIO 10 - Combined any month
-scenario_10 <- movements %>%
-  filter(
-    !(source %in% CB_all_candidates),
-    !(destination %in% CB_all_candidates)
-  )
-```
-```{r}
-# check worked & df
-any(CB_all_candidates %in% scenario_10$source)
-any(CB_all_candidates %in% scenario_10$destination)
-class(scenario_10)
-```
+NEED TO REMOVE COMBINED AND REPEAT CONTROLS AS POOLED 
+
+CREATING POOLED CONTROLS
+
+Create network configurations Control_ODHIGH1/10 .... Control_ODHIGH10/10; set.seed needs to be different for every control - ensure different random farms are removed & is reproducible.
+Run each control network configuration through the SOIR sim and get 10x results
+Import the results to analysis notebook and ?pool them?
 
 ```{r}
-# control 1 (high)
-# SCENARIO 11 - random removal of 4 farms
-
-set.seed(11) # Set random seed to ensure the same random farms can be selected in future runs.
-
 all_farms <- unique(c(movements$source, movements$destination))
-
-random_4 <- sample(all_farms, 4) 
-
-scenario_11 <- movements %>%
-  filter(
-    !(source %in% random_4),
-    !(destination %in% random_4)
-  )
 ```
 ```{r}
-# check worked & df
-any(random_4 %in% scenario_11$source)
-any(random_4 %in% scenario_11$destination)
-class(scenario_11)
-dim(scenario_11) # - number of rows (movements)
-length(unique(c(scenario_11$source, scenario_11$destination))) # number of nodes
-```
-
-```{r}
-# control 2 (med)
-# SCENARIO 12 - random removal of 9 farms
-
-set.seed(12) # Set random seed to ensure the same random farms can be selected in future runs.
-
-random_9 <- sample(all_farms, 9)
-
-scenario_12 <- movements %>%
-  filter(
-    !(source %in% random_9),
-    !(destination %in% random_9)
-  )
-```
-```{r}
-# check worked & df
-any(random_9 %in% scenario_12$source)
-any(random_9 %in% scenario_12$destination)
-class(scenario_12)
-
-dim(scenario_12) # - number of rows (movements)
-length(unique(c(scenario_12$source, scenario_12$destination))) # number of nodes
-```
-
-```{r}
-# Control 3 (all)
-# SCENARIO 13 - random removal of 40 farms = control all
-
-set.seed(13) # Set random seed to ensure the same random farms can be selected in future runs.
-
-random_40 <- sample(all_farms, 40)
-
-scenario_13 <- movements %>%
-  filter(
-    !(source %in% random_40),
-    !(destination %in% random_40)
-  )
-```
-```{r}
-# check worked & df
-any(random_40 %in% scenario_13$source)
-any(random_40 %in% scenario_13$destination)
-class(scenario_13)
-```
-```{r}
-dim(scenario_13) # - number of rows (movements)
-length(unique(c(scenario_13$source, scenario_13$destination))) # number of nodes
-```
-ADD CONTROLS FOR EACH SCENARIO EXCEPT COMBINED - NOT USIGN
-
-```{r}
-# Control OD High 
+# Control OD High 1/10 
 # SCENARIO 14 - random removal of 5 farms = control HIGH
 
 set.seed(14) # Set random seed to ensure the same random farms can be selected in future runs.
@@ -756,12 +647,36 @@ scenario_14 <- movements %>%
     !(destination %in% random_5)
   )
 ```
+
 ```{r}
-# check worked & df
-any(random_5 %in% scenario_14$source)
-any(random_5 %in% scenario_14$destination)
-class(scenario_14)
+# prompt: make this code into a loop, with a different set.seed, to produce 10x random controls for scenario 14 (a->j)
+
+# Control OD High 1/10 to 10/10
+# SCENARIO 8 - random removal of 5 farms = control OD HIGH
+
+scenario_8P_controls <- list()
+
+for (i in 1:10) {
+  
+  set.seed(13 + i) # different seed for each random control
+  
+  random_5 <- sample(all_farms, 5)
+  
+  scenario_8P_controls[[i]] <- movements %>%
+    filter(
+      !(source %in% random_5),
+      !(destination %in% random_5)
+    )
+}
 ```
+```{r}
+length(scenario_8P_controls)
+```
+```{r}
+# individual movement datasets are:
+scenario_8P_controls[[1]] # etc - create loop for SOIR? and save each control as separate .rds file
+```
+
 ```{r}
 # Control OD MED 
 # SCENARIO 15 - random removal of 8 farms = control MED
@@ -777,10 +692,26 @@ scenario_15 <- movements %>%
   )
 ```
 ```{r}
-# check worked & df
-any(random_8 %in% scenario_15$source)
-any(random_8 %in% scenario_15$destination)
-class(scenario_15)
+# Control OD Med 1/10 to 10/10
+# SCENARIO 9 - random removal of 8 farms = control OD MED
+
+scenario_9P_controls <- list()
+
+for (i in 1:10) {
+  
+  set.seed(23 + i) # different seed for each random control
+  
+  random_8 <- sample(all_farms, 8)
+  
+  scenario_9P_controls[[i]] <- movements %>%
+    filter(
+      !(source %in% random_8),
+      !(destination %in% random_8)
+    )
+}
+```
+```{r}
+length(scenario_9P_controls)
 ```
 ```{r}
 # Control OD ALL 
@@ -796,15 +727,34 @@ scenario_16 <- movements %>%
     !(destination %in% random_43)
   )
 ```
+
+
 ```{r}
-# check worked & df
-any(random_43 %in% scenario_16$source)
-any(random_43 %in% scenario_16$destination)
-class(scenario_16)
+# Control OD All 1/10 to 10/10
+# SCENARIO 10 - random removal of 43 farms = control OD ALL
+
+scenario_10P_controls <- list()
+
+for (i in 1:10) {
+  
+  set.seed(33 + i) # different seed for each random control
+  
+  random_43 <- sample(all_farms, 43)
+  
+  scenario_10P_controls[[i]] <- movements %>%
+    filter(
+      !(source %in% random_43),
+      !(destination %in% random_43)
+    )
+}
 ```
 ```{r}
+length(scenario_10P_controls)
+```
+
+```{r}
 # Control BT HIGH 
-# SCENARIO 17 - random removal of 6 farms = control HIGH
+# SCENARIO 17 - random removal of 1 farms = control HIGH
 
 set.seed(111) # Set random seed to ensure the same random farms can be selected in future runs.
 
@@ -818,12 +768,31 @@ scenario_17 <- movements %>%
     !(destination %in% random_1)
   )
 ```
+
+
 ```{r}
-# check worked & df
-any(random_1 %in% scenario_17$source)
-any(random_1 %in% scenario_17$destination)
-class(scenario_17)
+# Control BT HIGH 1/10 to 10/10
+# SCENARIO 11 - random removal of 1 farms = control BT HIGH
+
+scenario_11P_controls <- list()
+
+for (i in 1:10) {
+  
+  set.seed(43 + i) # different seed for each random control
+  
+  random_1 <- sample(all_farms, 1)
+  
+  scenario_11P_controls[[i]] <- movements %>%
+    filter(
+      !(source %in% random_1),
+      !(destination %in% random_1)
+    )
+}
 ```
+```{r}
+length(scenario_11P_controls)
+```
+
 ```{r}
 # Control BT MED 
 # SCENARIO 18 - random removal of 14 farms = control MED
@@ -844,6 +813,30 @@ any(random_8 %in% scenario_18$source)
 any(random_8 %in% scenario_18$destination)
 class(scenario_18)
 ```
+
+```{r}
+# Control BT MED 1/10 to 10/10
+# SCENARIO 12 - random removal of 18 farms = control BT MED
+
+scenario_12P_controls <- list()
+
+for (i in 1:10) {
+  
+  set.seed(53 + i) # different seed for each random control
+  
+  random_18 <- sample(all_farms, 18)
+  
+  scenario_12P_controls[[i]] <- movements %>%
+    filter(
+      !(source %in% random_18),
+      !(destination %in% random_18)
+    )
+}
+```
+```{r}
+length(scenario_12P_controls)
+```
+
 ```{r}
 # Control BT ALL 
 # SCENARIO 19 - random removal of 47 farms = control all
@@ -858,6 +851,37 @@ scenario_19 <- movements %>%
     !(destination %in% random_35)
   )
 ```
+
+```{r}
+# Control BT ALL 1/10 to 10/10
+# SCENARIO 13 - random removal of 35 farms = control BT ALL
+
+scenario_13P_controls <- list()
+
+for (i in 1:10) {
+  
+  set.seed(63 + i) # different seed for each random control
+  
+  random_35 <- sample(all_farms, 35)
+  
+  scenario_13P_controls[[i]] <- movements %>%
+    filter(
+      !(source %in% random_35),
+      !(destination %in% random_35)
+    )
+}
+```
+```{r}
+length(scenario_13P_controls)
+```
+
+CREATING POOLED CONTROLS
+
+Create network configurations Control_ODHIGH1/10 .... Control_ODHIGH10/10; set.seed needs to be different for every control - ensure different random farms are removed & is reproducible.
+Run each control network configuration through the SOIR sim and get 10x results
+Import the results to analysis notebook and ?pool them?
+
+
 ```{r}
 # check worked & df
 any(random_35 %in% scenario_19$source)
@@ -876,12 +900,12 @@ scenario_table <- data.frame(
     "Betweenness >= 6 months",
     "Betweenness >= 4 months",
     "Betweenness any month",
-    "Combined BT >= 6 months & OD >= 8 months",
-    "Combined BT >= 4 months & OD >= 6 months",
-    "Combined any month",
-    "Control High",
-    "Control Med",
-    "Control All"
+    "Control OD HIGH x10",
+    "Control OD MED x10",
+    "Cotnrol OD ALL x10",
+    "Control BT HIGH X10",
+    "Control BT MED X10",
+    "Control BT All X10"
   )
 )
 
@@ -1055,7 +1079,7 @@ head(daily_results_SC3)
 head(summary_results_SC3)
 ```
 
-# Scenario 4 - Outdegree any month
+# Scenario 4 - Outdegree aLL month
 
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
@@ -1163,7 +1187,7 @@ head(daily_results_SC6)
 head(summary_results_SC6)
 ```
 
-# Scenario 7 - Betweenness any month
+# Scenario 7 - Betweenness aLL month
 
 ```{r}
 # calls the function 2000 times - one for each row of scenario_grid
@@ -1200,325 +1224,145 @@ head(daily_results_SC7)
 head(summary_results_SC7)
 ```
 
-# Scenario 8 - Combined (high) BT >= 6 months & OD >= 8 months
+# Scenario 8	- Control OD HIGH x10
 ```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_8_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_8,# movement dataset for this scenario_X 
-      "Combined BT >= 6 months & OD >= 8 months" # description of scenario - see look up table
-    )
-  }
-)
-```
-```{r}
-saveRDS(scenario_8_results, "scenario_8_results.rds")
-```
+# prompt: using this structure, show me code to loop through the 10 control scenarios and save each result as a separate .rds file
 
-
-```{r}
-# combine the daily outputs from all 2000 sim replicates into one data frame
-
-# daily result - epidemic curves for all 2000 stochastic runs
-daily_results_SC8 <- bind_rows( 
-  lapply(scenario_8_results, function(x) x$daily) 
-)
-# peak infectious and final outbreak size per run
-summary_results_SC8 <- bind_rows(
-  lapply(scenario_8_results, function(x) x$summary)
-)
-```
-```{r}
-head(daily_results_SC8)
-head(summary_results_SC8)
-```
-
-# Scenario 9 - Combined (med) BT>= 4 months & 0D >= 6 months
-
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_9_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_9,# movement dataset for this scenario_X 
-      "Combined BT>= 4 months & 0D >= 6 months" # description of scenario - see look up table
-    )
-  }
-)
-
-saveRDS(scenario_9_results, "scenario_9_results.rds")
+for (j in 1:10) {
+  
+  control_results <- pblapply(
+    seq_len(nrow(scenario_grid)),
+    function(i){
+      run_scenario(
+        scenario_grid[i, , drop = FALSE],
+        scenario_8P_controls[[j]],
+        paste0("Scenario 8P Control ", j)
+      )
+    }
+  )
+  
+  saveRDS(
+    control_results,
+    paste0("scenario_8P_control_", j, "_results.rds")
+  )
+}
 ```
 
 
+
+# Scenario 9 - Control OD MED x10
 ```{r}
-# combine the daily outputs from all 2000 sim replicates into one data frame
-
-# daily result - epidemic curves for all 2000 stochastic runs
-daily_results_SC9 <- bind_rows( 
-  lapply(scenario_9_results, function(x) x$daily) 
-)
-# peak infectious and final outbreak size per run
-summary_results_SC9 <- bind_rows(
-  lapply(scenario_9_results, function(x) x$summary)
-)
-```
-```{r}
-head(daily_results_SC9)
-head(summary_results_SC9)
-```
-
-# Scenario 10 - Combined any month
-
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_10_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_10,# movement dataset for this scenario_X 
-      "Combined any month" # description of scenario - see look up table
-    )
-  }
-)
-
-saveRDS(scenario_10_results, "scenario_10_results.rds")
+for (j in 1:10) {
+  
+  control_results9 <- pblapply(
+    seq_len(nrow(scenario_grid)),
+    function(i){
+      run_scenario(
+        scenario_grid[i, , drop = FALSE],
+        scenario_9P_controls[[j]],
+        paste0("Scenario 9P Control ", j)
+      )
+    }
+  )
+  
+  saveRDS(
+    control_results9,
+    paste0("scenario_9P_control_", j, "_results.rds")
+  )
+}
 ```
 
 
-```{r}
-# combine the daily outputs from all 2000 sim replicates into one data frame
-
-# daily result - epidemic curves for all 2000 stochastic runs
-daily_results_SC10 <- bind_rows( 
-  lapply(scenario_10_results, function(x) x$daily) 
-)
-# peak infectious and final outbreak size per run
-summary_results_SC10 <- bind_rows(
-  lapply(scenario_10_results, function(x) x$summary)
-)
-```
-```{r}
-head(daily_results_SC10)
-head(summary_results_SC10)
-```
-
-CONTROLS - If I remove the same number of farms, is targeted removal (SC2-10) more effective than random removal?
-# Scenario 11 - control High - random 4 farms (average of scenarios 3/6/9) = 4.33 (4) 
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_11_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_11,# movement dataset for this scenario_X 
-      "Control High" # description of scenario - see look up table
-    )
-  }
-)
-
-saveRDS(scenario_11_results, "scenario_11_results.rds")
-```
-```{r}
-# combine the daily outputs from all 2000 sim replicates into one data frame
-
-# daily result - epidemic curves for all 2000 stochastic runs
-daily_results_SC11 <- bind_rows( 
-  lapply(scenario_11_results, function(x) x$daily) 
-)
-# peak infectious and final outbreak size per run
-summary_results_SC11 <- bind_rows(
-  lapply(scenario_11_results, function(x) x$summary)
-)
-```
-```{r}
-head(daily_results_SC11)
-head(summary_results_SC11)
-```
-# Scenario 12 - control med - random 9 farms (average of scenarios 2/5/8) = 9.33 (9)
+# Scenario 10 - Control OD ALL X10
 
 ```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_12_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_12,# movement dataset for this scenario_X 
-      "Control Med" # description of scenario - see look up table
-    )
-  }
-)
+for (j in 1:10) {
+  
+  control_results10 <- pblapply(
+    seq_len(nrow(scenario_grid)),
+    function(i){
+      run_scenario(
+        scenario_grid[i, , drop = FALSE],
+        scenario_10P_controls[[j]],
+        paste0("Scenario 10P Control ", j)
+      )
+    }
+  )
+  
+  saveRDS(
+    control_results10,
+    paste0("scenario_10P_control_", j, "_results.rds")
+  )
+}
+```
 
-saveRDS(scenario_12_results, "scenario_12_results.rds")
-```
-```{r}
-# combine the daily outputs from all 2000 sim replicates into one data frame
 
-# daily result - epidemic curves for all 2000 stochastic runs
-daily_results_SC12 <- bind_rows( 
-  lapply(scenario_12_results, function(x) x$daily) 
-)
-# peak infectious and final outbreak size per run
-summary_results_SC12 <- bind_rows(
-  lapply(scenario_12_results, function(x) x$summary)
-)
-```
+# Scenario 11 - Control BT HIGH x10
 ```{r}
-head(daily_results_SC12)
-head(summary_results_SC12)
+for (j in 1:10) {
+  
+  control_results11 <- pblapply(
+    seq_len(nrow(scenario_grid)),
+    function(i){
+      run_scenario(
+        scenario_grid[i, , drop = FALSE],
+        scenario_11P_controls[[j]],
+        paste0("Scenario 11P Control ", j)
+      )
+    }
+  )
+  
+  saveRDS(
+    control_results11,
+    paste0("scenario_11P_control_", j, "_results.rds")
+  )
+}
 ```
-# Scenario 13 - random 40 farms (average of scenarios 4/7/10) = 40.33 (40)
+
+
+# Scenario 12 - Control BT MED X10
 
 ```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_13_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_13,# movement dataset for this scenario_X 
-      "Control All" # description of scenario - see look up table
-    )
-  }
-)
+for (j in 1:10) {
+  
+  control_results12 <- pblapply(
+    seq_len(nrow(scenario_grid)),
+    function(i){
+      run_scenario(
+        scenario_grid[i, , drop = FALSE],
+        scenario_12P_controls[[j]],
+        paste0("Scenario 12P Control ", j)
+      )
+    }
+  )
+  
+  saveRDS(
+    control_results12,
+    paste0("scenario_12P_control_", j, "_results.rds")
+  )
+}
+```
 
-saveRDS(scenario_13_results, "scenario_13_results.rds")
-```
-# Scenario 14
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_14_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_14,# movement dataset for this scenario_X 
-      "Control All" # description of scenario - see look up table - OD HIGH CONTROL
-    )
-  }
-)
+# Scenario 13 - Control BT ALL X10
 
-saveRDS(scenario_14_results, "scenario_14_results.rds")
-```
-# Scenario 15
 ```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_15_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_15,# movement dataset for this scenario_X 
-      "Control All" # description of scenario - see look up table - OD MED CONTROL
-    )
-  }
-)
-
-saveRDS(scenario_15_results, "scenario_15_results.rds")
-```
-# Scenario 16
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_16_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_16,# movement dataset for this scenario_X 
-      "Control All" # description of scenario - see look up table - OD ALL CONTROL
-    )
-  }
-)
-
-saveRDS(scenario_16_results, "scenario_16_results.rds")
-```
-# Scenario 17
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_17_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_17,# movement dataset for this scenario_X 
-      "Control All" # description of scenario - see look up table - BT HIGH CONTROL
-    )
-  }
-)
-```
-```{r}
-saveRDS(scenario_17_results, "scenario_17_results_corrected.rds")
-```
-# Scenario 18
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_18_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_18,# movement dataset for this scenario_X 
-      "Control All" # description of scenario - see look up table - BT MED CONTROL
-    )
-  }
-)
-```
-```{r}
-saveRDS(scenario_18_results, "scenario_18_results_corrected.rds")
-```
-# Scenario 19
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_19_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_19,# movement dataset for this scenario_X 
-      "Control All" # description of scenario - see look up table - BT ALL CONTROL
-    )
-  }
-)
-```
-```{r}
-saveRDS(scenario_19_results, "scenario_19_results_corrected.rds")
-```
-```{r}
-# calls the function 2000 times - one for each row of scenario_grid
-scenario_19_results <- pblapply(
-  seq_len(nrow(scenario_grid)),
-  function(i){
-    run_scenario(
-      scenario_grid[i, , drop = FALSE], # becomes scenario_row inside funciton
-      scenario_19,# movement dataset for this scenario_X 
-      "Control All" # description of scenario - see look up table
-    )
-  }
-)
-
-saveRDS(scenario_19_results, "scenario_19_results.rds")
-```
-```{r}
-# combine the daily outputs from all 2000 sim replicates into one data frame
-
-# daily result - epidemic curves for all 2000 stochastic runs
-daily_results_SC13 <- bind_rows( 
-  lapply(scenario_13_results, function(x) x$daily) 
-)
-# peak infectious and final outbreak size per run
-summary_results_SC13 <- bind_rows(
-  lapply(scenario_13_results, function(x) x$summary)
-)
-```
-```{r}
-head(daily_results_SC13)
-head(summary_results_SC13)
+for (j in 1:10) {
+  
+  control_results13 <- pblapply(
+    seq_len(nrow(scenario_grid)),
+    function(i){
+      run_scenario(
+        scenario_grid[i, , drop = FALSE],
+        scenario_13P_controls[[j]],
+        paste0("Scenario 13P Control ", j)
+      )
+    }
+  )
+  
+  saveRDS(
+    control_results13,
+    paste0("scenario_13P_control_", j, "_results.rds")
+  )
+}
 ```
 
