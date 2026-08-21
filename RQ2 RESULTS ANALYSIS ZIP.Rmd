@@ -125,6 +125,10 @@ scenario_13j_results <- readRDS("scenario_13P_control_10_results.rds")
 pooled control - 20,000 stochastic outcomes - gives the matched control estimate (median/mean/IQR)
 between-control variation - 10 separate 2000-run simulations - demonstrates that the pooled result is reasonably consitent across the random farms selected
 
+Pooled results - used to estimate the overall distribution of outbreak outcomes under matched random removal
+
+Between control variation - used to demonstrate that this pooled distribution isn't being triven disproportionately by one particular random-control network
+
 ```{r}
 # SCENARIO 8
 # pool the 20,000 outcomes
@@ -151,6 +155,15 @@ control_8_finalsizes <- unlist(
 control_8_peakinfectious <- unlist(
   lapply(control_8_results_pooled, function(x) {
     sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+# AI code - fixed nesting problem to keep column names
+summary_results$SC8 <- bind_rows(
+  lapply(control_8_results_pooled, function(x) {
+    bind_rows(lapply(x, function(i) i$summary))
   })
 )
 ```
@@ -187,15 +200,29 @@ control_8_variance <- do.call(
     
     data.frame(
       Control = i,
+      N = length(x),
       Mean = mean(x),
       Median = median(x),
-      IQR = IQR(x)
+      IQR = IQR(x),
+      SD = sd(x)
     )
   })
 )
 
 control_8_variance
 ```
+```{r}
+# calculate variability between the 10 controls - how consistent are the matched controls?
+
+sd(control_8_variance$Mean)
+```
+```{r}
+# range of control means
+
+range(control_8_variance$Mean)
+```
+Across the 10 matched random controls, mean final outbreak size ranged from 2.47 to 2.96, with a SD of 0.16
+
 ```{r}
 ggplot(control_8_variance, aes(x = Control, y = Mean)) +
   geom_point(size = 3) +
@@ -208,6 +235,26 @@ ggplot(control_8_variance, aes(x = Control, y = Mean)) +
     title = "Scenario 8: variation in mean final outbreak size",
     x = "Random control simulation",
     y = "Mean final outbreak size"
+  )
+```
+```{r}
+# add boxplot to show distribution (AI)
+ggplot(control_8_variance, aes(x = 1, y = Mean)) +
+  geom_boxplot(width = 0.25, alpha = 0.2) +
+  geom_jitter(width = 0.05, size = 3) +
+  geom_hline(
+    yintercept = control_8_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 8: consistency across matched random controls",
+    x = NULL,
+    y = "Mean final outbreak size"
+  ) +
+  scale_x_continuous(
+    breaks = 1,
+    labels = "10 matched random controls"
   )
 ```
 State - across the ten random control configurations, the median final outbreak size was 1 (IQR= 0) in all configurations, while mean oubtreak sizes were also similar, indicating limited variation between random control configurations - APPENDIX
@@ -238,6 +285,21 @@ control_9_finalsizes <- unlist(
 control_9_peakinfectious <- unlist(
   lapply(control_9_results_pooled, function(x) {
     sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+#summary_results$SC9 <- bind_rows(
+ # lapply(control_9_results_pooled, function(x) x$summary)
+#)
+```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+# AI code - fixed nesting problem to keep column names
+summary_results$SC9 <- bind_rows(
+  lapply(control_9_results_pooled, function(x) {
+    bind_rows(lapply(x, function(i) i$summary))
   })
 )
 ```
@@ -274,14 +336,26 @@ control_9_variance <- do.call(
     
     data.frame(
       Control = i,
+      N = length(x),
       Mean = mean(x),
       Median = median(x),
-      IQR = IQR(x)
+      IQR = IQR(x),
+      SD = sd(x)
     )
   })
 )
 
 control_9_variance
+```
+```{r}
+# calculate variability between the 10 controls - how consistent are the matched controls?
+
+sd(control_9_variance$Mean)
+```
+```{r}
+# range of control means
+
+range(control_9_variance$Mean)
 ```
 ```{r}
 ggplot(control_9_variance, aes(x = Control, y = Mean)) +
@@ -295,6 +369,26 @@ ggplot(control_9_variance, aes(x = Control, y = Mean)) +
     title = "Scenario 9: variation in mean final outbreak size",
     x = "Random control simulation",
     y = "Mean final outbreak size"
+  )
+```
+```{r}
+# add boxplot to show distribution (AI)
+ggplot(control_9_variance, aes(x = 1, y = Mean)) +
+  geom_boxplot(width = 0.25, alpha = 0.2) +
+  geom_jitter(width = 0.05, size = 3) +
+  geom_hline(
+    yintercept = control_9_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 9: consistency across matched random controls",
+    x = NULL,
+    y = "Mean final outbreak size"
+  ) +
+  scale_x_continuous(
+    breaks = 1,
+    labels = "10 matched random controls"
   )
 ```
 
@@ -325,6 +419,21 @@ control_10_finalsizes <- unlist(
 control_10_peakinfectious <- unlist(
   lapply(control_10_results_pooled, function(x) {
     sapply(x, function(i) i$summary$peak_infectious)
+  })
+)
+```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+#summary_results$SC10 <- bind_rows(
+  #lapply(control_10_results_pooled, function(x) x$summary)
+#)
+```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+# AI code - fixed nesting problem to keep column names
+summary_results$SC10 <- bind_rows(
+  lapply(control_10_results_pooled, function(x) {
+    bind_rows(lapply(x, function(i) i$summary))
   })
 )
 ```
@@ -361,9 +470,11 @@ control_10_variance <- do.call(
     
     data.frame(
       Control = i,
+      N = length(x),
       Mean = mean(x),
       Median = median(x),
-      IQR = IQR(x)
+      IQR = IQR(x),
+      SD = sd(x)
     )
   })
 )
@@ -371,6 +482,17 @@ control_10_variance <- do.call(
 control_10_variance
 ```
 ```{r}
+# calculate variability between the 10 controls - how consistent are the matched controls?
+
+sd(control_10_variance$Mean)
+```
+```{r}
+# range of control means
+
+range(control_10_variance$Mean)
+```
+```{r}
+# SEE CODE ABOVE TO MAKE BOX PLOT TO BETTER SHOW DIST
 ggplot(control_10_variance, aes(x = Control, y = Mean)) +
   geom_point(size = 3) +
   geom_hline(
@@ -414,6 +536,21 @@ control_11_peakinfectious <- unlist(
   })
 )
 ```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+#summary_results$SC11 <- bind_rows(
+  #lapply(control_11_results_pooled, function(x) x$summary)
+#)
+```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+# AI code - fixed nesting problem to keep column names
+summary_results$SC11 <- bind_rows(
+  lapply(control_11_results_pooled, function(x) {
+    bind_rows(lapply(x, function(i) i$summary))
+  })
+)
+```
 
 ```{r}
 length(control_11_finalsizes)
@@ -447,15 +584,28 @@ control_11_variance <- do.call(
     
     data.frame(
       Control = i,
+      N = length(x),
       Mean = mean(x),
       Median = median(x),
-      IQR = IQR(x)
+      IQR = IQR(x),
+      SD = sd(x)
     )
   })
 )
 
 control_11_variance
 ```
+```{r}
+# calculate variability between the 10 controls - how consistent are the matched controls?
+
+sd(control_11_variance$Mean)
+```
+```{r}
+# range of control means
+
+range(control_11_variance$Mean)
+```
+
 ```{r}
 ggplot(control_11_variance, aes(x = Control, y = Mean)) +
   geom_point(size = 3) +
@@ -500,6 +650,21 @@ control_12_peakinfectious <- unlist(
   })
 )
 ```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+#summary_results$SC12 <- bind_rows(
+  #lapply(control_12_results_pooled, function(x) x$summary)
+#)
+```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+# AI code - fixed nesting problem to keep column names
+summary_results$SC12 <- bind_rows(
+  lapply(control_12_results_pooled, function(x) {
+    bind_rows(lapply(x, function(i) i$summary))
+  })
+)
+```
 
 ```{r}
 length(control_12_finalsizes)
@@ -533,14 +698,26 @@ control_12_variance <- do.call(
     
     data.frame(
       Control = i,
+      N = length(x),
       Mean = mean(x),
       Median = median(x),
-      IQR = IQR(x)
+      IQR = IQR(x),
+      SD = sd(x)
     )
   })
 )
 
 control_12_variance
+```
+```{r}
+# calculate variability between the 10 controls - how consistent are the matched controls?
+
+sd(control_12_variance$Mean)
+```
+```{r}
+# range of control means
+
+range(control_12_variance$Mean)
 ```
 ```{r}
 ggplot(control_12_variance, aes(x = Control, y = Mean)) +
@@ -586,6 +763,21 @@ control_13_peakinfectious <- unlist(
   })
 )
 ```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+#summary_results$SC13 <- bind_rows(
+  #lapply(control_13_results_pooled, function(x) x$summary)
+#)
+```
+```{r}
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+# AI code - fixed nesting problem to keep column names
+summary_results$SC13 <- bind_rows(
+  lapply(control_13_results_pooled, function(x) {
+    bind_rows(lapply(x, function(i) i$summary))
+  })
+)
+```
 
 ```{r}
 length(control_13_finalsizes)
@@ -619,14 +811,26 @@ control_13_variance <- do.call(
     
     data.frame(
       Control = i,
+      N = length(x),
       Mean = mean(x),
       Median = median(x),
-      IQR = IQR(x)
+      IQR = IQR(x),
+      SD = sd(x)
     )
   })
 )
 
 control_13_variance
+```
+```{r}
+# calculate variability between the 10 controls - how consistent are the matched controls?
+
+sd(control_13_variance$Mean)
+```
+```{r}
+# range of control means
+
+range(control_13_variance$Mean)
 ```
 ```{r}
 ggplot(control_13_variance, aes(x = Control, y = Mean)) +
@@ -685,7 +889,9 @@ for (scenario in names(all_scenarios)) {
 
 # call individual with - summary_results$SC3 etc
 ```
-
+```{r}
+summary_results$SC3
+```
 # Read in data from RQ1 for number farms removed
 
 ```{r}
@@ -838,11 +1044,11 @@ load and construct the annual network
 # modify graph/network code from RQ1.Rmd
 create_movement_network <- function(df) {
 
-  # Convert IDs
+  # Convert IDs to character values
   df$org_id  <- as.character(df$org_id)
   df$dest_id <- as.character(df$dest_id)
 
-  # Node table
+  # create node list containing orgs & dest & their types
   org_nodes <- df[, c("org_id", "org_type")]
   colnames(org_nodes) <- c("name", "type")
 
@@ -851,7 +1057,7 @@ create_movement_network <- function(df) {
 
   nodes <- unique(rbind(org_nodes, dest_nodes))
 
-  # Edge list
+  # creates directed edges 
   edges <- df[, c("org_id", "dest_id")]
 
   # Create directed network
@@ -861,7 +1067,7 @@ create_movement_network <- function(df) {
     directed = TRUE
   )
 
-  # Add weights
+  # Add edge weight as total cattle
   E(g)$weight <- df$total_cattle
 
   return(g)
@@ -886,7 +1092,7 @@ vcount(annual_network)
 V(annual_network)$name
 ```
 
-Calculate baseline GWCC
+Calculate baseline GWCC (network connectivity)
 ```{r}
 # calculate basline GWCC
 baseline_gwcc <- max(components(annual_network, mode = "weak")$csize) # csize = extract number of farms in each connected component
@@ -962,19 +1168,20 @@ gwcc_results <- data.frame(
 
 for (s in names(removal_scenarios)) {
   
-  removed_network <- delete_vertices(
+  removed_network <- delete_vertices( # deletes selected farms from the network
     annual_network,
     removal_scenarios[[s]]
   )
   
-  comp <- components(removed_network, mode = "weak")
+  comp <- components(removed_network, mode = "weak") # finds all weakly connected components
   
-  farms_remaining <- vcount(removed_network)
+  farms_remaining <- vcount(removed_network) # counts how many farms remain
   
-  gwcc_size <-max(comp$csize)
+  gwcc_size <-max(comp$csize) # find size of largest component (GWCC size)
   
   gwcc_percent <- (gwcc_size / farms_remaining) * 100 # this is GWCC size (% of farms remaining), NOT percentage of original network
   
+  # store results in gwcc_results
   gwcc_results <- rbind(
     gwcc_results,
     data.frame(
@@ -999,7 +1206,7 @@ baseline_comp <- components(annual_network, mode = "weak")
 
 #baseline_components <- baseline_comp$no
 
-# add baseline GWCC
+# add baseline GWCC as S1
 gwcc_results <- rbind(
   data.frame(
     Scenario = "S1",
@@ -1021,8 +1228,9 @@ Clear the results object
 # REMOVE RESULTS
 rm(gwcc_results)
 ```
-Final network membership checks
+Final network membership checks - check whether the farms in annual_OD_top5 actually exist in the annual  network
 ```{r}
+# count how many of those farms are present
 sum(annual_OD_top5 %in% V(annual_network)$name)
 ```
 ```{r}
@@ -1041,22 +1249,35 @@ length(intersect(annual_OD_top5, V(annual_network)$name))
 ```{r}
 # plot the distribution
 
-ggplot(summary_results_SC1, aes(x = final_infected)) +
+p_hist <- ggplot(summary_results_SC1, aes(x = final_infected)) +
   geom_histogram(
     binwidth = 1,
     colour = "black",
-    fill = "steelblue"
+    fill = "forestgreen"
   ) +
   labs(
     x = "Final outbreak size (infected farms)",
     y = "Number of simulations",
-    title = "Distribution of final outbreak sizes"
+    title = "Distribution of final outbreak sizes in baseline simulations"
   ) +
   theme_classic()
-```
-Create the scenario outbreak size data
 
+ggsave(
+  "baseline_outbreak_dists.png", # can change to pdf
+  plot = p_hist,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
+
+p_hist
+```
+Histogram does not show obvious break to select as threshold. 
+
+Create the scenario outbreak size data
 ```{r}
+# extract outbreak-size results for each scenario
 summary_results_SC1 <- summary_results$SC1
 summary_results_SC2 <- summary_results$SC2
 summary_results_SC3 <- summary_results$SC3
@@ -1064,36 +1285,53 @@ summary_results_SC4 <- summary_results$SC4
 summary_results_SC5 <- summary_results$SC5
 summary_results_SC6 <- summary_results$SC6
 summary_results_SC7 <- summary_results$SC7
-#summary_results_SC8 <- summary_results$SC8
-#summary_results_SC9 <- summary_results$SC9
-#summary_results_SC10 <- summary_results$SC10
-#summary_results_SC11 <- summary_results$SC11
-#summary_results_SC12 <- summary_results$SC12
-#summary_results_SC13 <- summary_results$SC13
-summary_results_SC14 <- summary_results$SC14
-summary_results_SC15 <- summary_results$SC15
-summary_results_SC16 <- summary_results$SC16
-summary_results_SC17 <- summary_results$SC17
-summary_results_SC18 <- summary_results$SC18
-summary_results_SC19 <- summary_results$SC19
+# pooled controls
+summary_results_SC8 <- summary_results$SC8
+summary_results_SC9 <- summary_results$SC9
+summary_results_SC10 <- summary_results$SC10
+summary_results_SC11 <- summary_results$SC11
+summary_results_SC12 <- summary_results$SC12
+summary_results_SC13 <- summary_results$SC13
+
 ```
 ```{r}
 # create list of final outbreak sizes
 outbreak_sizes <- list(
-  Baseline = summary_results_SC1$final_infected,
-  Outdegree_high = summary_results_SC2$final_infected,
-  Out_degree_med = summary_results_SC3$final_infected,
-  Outdegree_all = summary_results_SC4$final_infected,
-  Betweenness_high = summary_results_SC5$final_infected,
-  Betweenness_med =summary_results_SC6$final_infected,
-  Betweenness_all = summary_results_SC7$final_infected
+  Baseline = summary_results$SC1$final_infected,
+  
+  Outdegree_high = summary_results$SC2$final_infected,
+  Out_degree_high_random = summary_results$SC8$final_infected,
+  
+  Out_degree_med = summary_results$SC3$final_infected,
+  Out_degree_med_random = summary_results$SC9$final_infected,
+  
+  Outdegree_all = summary_results$SC4$final_infected,
+  Outdegree_all_random = summary_results$SC10$final_infected,
+  
+  Betweenness_high = summary_results$SC5$final_infected,
+  Betweenness_high_random = summary_results$SC11$final_infected,
+  
+  Betweenness_med =summary_results$SC6$final_infected,
+  Betweenness_med_random = summary_results$SC12$final_infected,
+  
+  Betweenness_all = summary_results$SC7$final_infected,
+  Betweenness_all_random = summary_results$SC13$final_infected
 )
 
+```
+```{r}
+names(summary_results$SC8)
+names(summary_results$SC9)
+names(summary_results$SC10)
+names(summary_results$SC11)
+names(summary_results$SC12)
+names(summary_results$SC13)
 ```
 Threshold sensitivity analysis
   whether >=10 is robust
   
 ```{r}
+# calculates, for each scenario/control and threshold, the proportion of simulations where final infected farms >= thresholds2
 thresholds2 <- c(1, 2, 3, 5, 7, 10, 15, 20)
 
 threshold_results2 <- data.frame(
@@ -1120,11 +1358,15 @@ for (s in names(outbreak_sizes)) {
   }
 }
 ```
-Sensitivity plot
 ```{r}
-# plot sensitivity analysis
+threshold_results2
+```
 
-ggplot(threshold_results2,
+Sensitivity plot
+```{r, width = 12, height = 5}
+# plot sensitivity analysis - lines show the % of simulations that have exceeded the threshold of x final farms infected
+
+p_thresh_sens <- ggplot(threshold_results2,
        aes(x = Threshold2,
            y = proportion2,
            colour = Scenario2)) +
@@ -1132,40 +1374,87 @@ ggplot(threshold_results2,
   geom_point(size = 2) +
   scale_y_continuous(labels = scales::percent) +
   labs(
-    x = "Threshold (infected farms)",
-    y = "Probability of a major outbreak",
+    title = "Established epidemic threshold sensitivity analysis",
+    x = "Outbreak size threshold (no. infected farms)",
+    y = "Probability of exceeding threshold",
     colour = "Scenario"
   ) +
   theme_bw()
+
+ggsave(
+  "threshold_establish.png", # can change to pdf
+  plot = p_thresh_sens,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
+
+p_thresh_sens 
 ```
 
 
+Use for result 1?
+```{r}
+# plot intervention/control pairs
+
+threshold_10 <- threshold_results2 %>%
+  filter(Threshold2 == 10)
+
+ggplot(threshold_10,
+       aes(x = Scenario2, y = proportion2, fill = Scenario2)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    x = NULL,
+    y = "Probability of outbreak ≥10 infected farms"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+```
+```{r}
+#AI - how to make grouped bar plot to show pairs
+```
+
 # RESULT 1
 
-Likelihood of sustained transmission - replicats led to >=10 infected final infected farms
+Probability of sustained outbreak - replicates led to >=10 infected final infected farms
+Q = probability of a sustained outbreak over conditional threshold >= 10 final infected farms
 
 Define the scenarios and extract final outbreak size, this is the input to the analysis
 
+Need to consider - keep pooled controls = 20,000 vs 2,000 - should be ok if looking at overall probability of a >=10 outbreak under matched random removal BUT could keep distribution of 10 control probabilties and compare to the intervention probability (2,000 to 2,000).
+
+PLAN - stick with first option but report variance
+
 ```{r}
 # list of scenarios to include - dropped combined - see prev
+
 sustained_trans <- list(
-  baseline = summary_results_SC1$final_infected, 
-  OD_high = summary_results_SC2$final_infected,
-  OD_med = summary_results_SC3$final_infected, 
-  OD_all = summary_results_SC4$final_infected, 
-  BT_high = summary_results_SC5$final_infected, 
-  BT_med = summary_results_SC6$final_infected, 
-  BT_all = summary_results_SC7$final_infected, 
-  #CT_high = summary_results_SC11 
-  #CT_med = summary_results_SC12 
-  #CT_ALL = summary_results_SC13 
-  CT_OD_HIGH = summary_results_SC14$final_infected,
-  CT_OD_MED = summary_results_SC15$final_infected,
-  CT_OD_ALL = summary_results_SC16$final_infected,
-  CT_BT_HIGH = summary_results_SC17$final_infected,
-  CT_BT_MED = summary_results_SC18$final_infected,
-  CT_BT_ALL = summary_results_SC19$final_infected
+  Baseline = summary_results$SC1$final_infected,
+  
+  Outdegree_high = summary_results$SC2$final_infected, # contains final_infected result of 2000 simulations
+  Out_degree_high_random = summary_results$SC8$final_infected, # contains final_infected result of 20,000 simulations
+  
+  Out_degree_med = summary_results$SC3$final_infected,
+  Out_degree_med_random = summary_results$SC9$final_infected,
+  
+  Outdegree_all = summary_results$SC4$final_infected,
+  Outdegree_all_random = summary_results$SC10$final_infected,
+  
+  Betweenness_high = summary_results$SC5$final_infected,
+  Betweenness_high_random = summary_results$SC11$final_infected,
+  
+  Betweenness_med =summary_results$SC6$final_infected,
+  Betweenness_med_random = summary_results$SC12$final_infected,
+  
+  Betweenness_all = summary_results$SC7$final_infected,
+  Betweenness_all_random = summary_results$SC13$final_infected
 )
+
 ```
 Calculate the probability of sustained transmission and relative reduction
 
@@ -1173,6 +1462,7 @@ Calculate the probability of sustained transmission and relative reduction
 # counts how many simulations exceeded the threshold & calculates number sustained outbreaks; proportion sustained outbreaks; relative reduction vs baseline
 threshold_final <- 10
 
+# calculate proportions
 threshold_counts_final <- data.frame(
   Scenario_final = names(sustained_trans),
   Exceeding = sapply(sustained_trans, function(x) sum(x >= threshold_final)),
@@ -1182,211 +1472,414 @@ threshold_counts_final <- data.frame(
 threshold_counts_final$Proportion_final <- threshold_counts_final$Exceeding / threshold_counts_final$Total
 
 # extract baseline probability
-baseline_prob <- threshold_counts_final$Proportion_final[threshold_counts_final$Scenario_final == "baseline"]
+baseline_prob <- threshold_counts_final$Proportion_final[
+  threshold_counts_final$Scenario_final == "Baseline"
+]
 
-# calculate relatve reduction compared with baseline
-threshold_counts_final$Relative_reduction <- (
-  (baseline_prob - threshold_counts_final$Proportion_final) / baseline_prob
+# Relative reduction random matchec control vs baseline
+threshold_counts_final$Relative_reduction_vs_baseline <- NA_real_
+
+random_controls <- c(
+  "Out_degree_high_random",
+  "Out_degree_med_random",
+  "Outdegree_all_random",
+  "Betweenness_high_random",
+  "Betweenness_med_random",
+  "Betweenness_all_random"
+)
+
+for (control in random_controls) {
+  
+  control_prob <- threshold_counts_final$Proportion_final[
+    threshold_counts_final$Scenario_final == control
+  ]
+  
+  threshold_counts_final$Relative_reduction_vs_baseline[
+    threshold_counts_final$Scenario_final == control
+  ] <- (baseline_prob - control_prob) / baseline_prob
+}
+
+#baseline_prob <- threshold_counts_final$Proportion_final[threshold_counts_final$Scenario_final == "Baseline"]
+
+#threshold_counts_final$Relative_reduction <- (
+ # (baseline_prob - threshold_counts_final$Proportion_final) / #baseline_prob
+#)
+
+# Relative reduction intervention vs matched control (AI added code)
+
+threshold_counts_final$Relative_reduction_vs_random <- NA_real_
+
+pairs <- list(
+  c("Outdegree_high", "Out_degree_high_random"),
+  c("Out_degree_med", "Out_degree_med_random"),
+  c("Outdegree_all", "Outdegree_all_random"),
+  c("Betweenness_high", "Betweenness_high_random"),
+  c("Betweenness_med", "Betweenness_med_random"),
+  c("Betweenness_all", "Betweenness_all_random")
+)
+
+for (pair in pairs) {
+  
+  intervention <- pair[1]
+  control <- pair[2]
+  
+  intervention_prob <- threshold_counts_final$Proportion_final[
+    threshold_counts_final$Scenario_final == intervention
+  ]
+  
+  control_prob <- threshold_counts_final$Proportion_final[
+    threshold_counts_final$Scenario_final == control
+  ]
+  
+  threshold_counts_final$Relative_reduction_vs_random[
+    threshold_counts_final$Scenario_final == intervention
+  ] <- (control_prob - intervention_prob) / control_prob
+}
+
+colnames(threshold_counts_final) <- c(
+  "Scenario",
+  "Number of simulations >=10 infected farms",
+  "Total simulations",
+  "Probability of >=10 infected farms",
+  "Relative reduction matched Cx vs baseline",
+  "Relative reduction Int vs matched random control"
 )
 
 threshold_counts_final
 ```
+```{r}
+# save table
+write.csv(
+  threshold_counts_final,
+  "established_outbreak_results.csv",
+  row.names = FALSE
+)
+```
+
+Present results:
+(a) paired plot (bar?) of probabitliy of >=10 infected farms, intervention beside matched conttol
+
+(b) main table - scenario, number sims >=10; probability >=10, reduction: random contrl vs baseline; reduction int vs matched control.
+
+? add 95% confidence interval
+
 
 Organise scenarios by intervention type and intensity
-
 ```{r}
 # AI - how can i group this plot by intensity windows, maintaining controls
-# group by intensity and intervention type
 
-# grepl() - searches for a pattern in scenario name e.g. "High"
-# factor(..., levels = ...) - tells ggplot the order to display categories instead of using alphabetical order
+# Create empty columns
+threshold_counts_final$Intensity <- NA_character_
+threshold_counts_final$Method <- NA_character_
 
-# create two empty columns to store grouping information for plotting
-threshold_counts_final$Intensity <- NA
-threshold_counts_final$Method <- NA
+# Assign intensity
 
-  # assign intervention intensity
+threshold_counts_final$Intensity[
+  grepl("high", threshold_counts_final$Scenario, ignore.case = TRUE)
+] <- "High"
 
-# search scenario names (grepl) & assign each one to an intervention intensity label
-threshold_counts_final$Intensity[grepl("HIGH", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "High" # looks for high in every scenario name & assigns method
-threshold_counts_final$Intensity[grepl("MED", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "Medium"
-threshold_counts_final$Intensity[grepl("ALL", threshold_counts_final$Scenario_final, ignore.case = TRUE)] <- "All"
+threshold_counts_final$Intensity[
+  grepl("med", threshold_counts_final$Scenario, ignore.case = TRUE)
+] <- "Medium"
 
-# assign the baseline scenario its own intensity label
-threshold_counts_final$Intensity[threshold_counts_final$Scenario_final == "baseline"] <- "Baseline"
+threshold_counts_final$Intensity[
+  grepl("all", threshold_counts_final$Scenario, ignore.case = TRUE)
+] <- "All"
 
-  # assign intervention method
+threshold_counts_final$Intensity[
+  threshold_counts_final$Scenario == "Baseline"
+] <- "Baseline"
 
-# Label taregted interventions (grepl) according to the network metric used
-threshold_counts_final$Method[grepl("^OD", threshold_counts_final$Scenario_final)] <- "Out-degree"
-threshold_counts_final$Method[grepl("^BT", threshold_counts_final$Scenario_final)] <- "Betweenness"
+# Assign method
 
-# Keep the random matched controls separate from the targeted interventions
-threshold_counts_final$Method[grepl("CT_OD", threshold_counts_final$Scenario_final)] <- "Control (OD matched)"
-threshold_counts_final$Method[grepl("CT_BT", threshold_counts_final$Scenario_final)] <- "Control (BT matched)"
+# Random matched controls
+threshold_counts_final$Method[
+  grepl("out.*random", threshold_counts_final$Scenario, ignore.case = TRUE)
+] <- "Random control (OD matched)"
 
-# label the baseline scenario
-threshold_counts_final$Method[threshold_counts_final$Scenario_final == "baseline"] <- "Baseline"
+threshold_counts_final$Method[
+  grepl("betweenness.*random", threshold_counts_final$Scenario, ignore.case = TRUE)
+] <- "Random control (BT matched)"
 
 
-  # Set plotting order
-# convert intensity to an ordered factor so the panels appear in order wanted rather than alphabetically
+# Targeted interventions
+threshold_counts_final$Method[
+  grepl("^outdegree|^out_degree",
+        threshold_counts_final$Scenario,
+        ignore.case = TRUE) &
+  !grepl("random",
+         threshold_counts_final$Scenario,
+         ignore.case = TRUE)
+] <- "Out-degree"
+
+threshold_counts_final$Method[
+  grepl("^betweenness",
+        threshold_counts_final$Scenario,
+        ignore.case = TRUE) &
+  !grepl("random",
+         threshold_counts_final$Scenario,
+         ignore.case = TRUE)
+] <- "Betweenness"
+
+
+# Baseline
+threshold_counts_final$Method[
+  threshold_counts_final$Scenario == "Baseline"
+] <- "Baseline"
+
+
+# Set plotting order
+
 threshold_counts_final$Intensity <- factor(
   threshold_counts_final$Intensity,
   levels = c("High", "Medium", "All", "Baseline")
 )
 
-# convert method to an ordered factor to bars appear in order wanted rather than alphabetically 
-
 threshold_counts_final$Method <- factor(
   threshold_counts_final$Method,
   levels = c(
-    "Control (OD matched)",
+    "Baseline",
+    "Random control (OD matched)",
     "Out-degree",
-    "Control (BT matched)",
-    "Betweenness",
-    "Baseline"
+    "Random control (BT matched)",
+    "Betweenness"
   )
 )
+
+
+# Check
+threshold_counts_final[, c("Scenario", "Intensity", "Method")]
 ```
+```{r, fig.width = 14, fig.height = 6}
+# Main probability plot - grouped bar plot - int & matched ct beside each other with each intensity
+# AI - how to add baseline to each plot
 
-Create grouped probability plot
-
-```{r}
 # Duplicate baseline into each intensity panel
 
 baseline_row <- threshold_counts_final[
-  threshold_counts_final$Scenario_final == "baseline",
+  threshold_counts_final$Scenario == "Baseline", 
 ]
 
 baseline_repeated <- baseline_row[rep(1, 3), ]
 
-baseline_repeated$Intensity <- c("High", "Medium", "All")
+baseline_repeated$Intensity <- factor(
+  c("High", "Medium", "All"),
+  levels = c("High", "Medium", "All")
+)
+
 baseline_repeated$Method <- "Baseline"
 
-# Remove original baseline and add repeated baseline
+
+# Remove original baseline from plotting data
+# and add baseline to each intensity panel
+
 plot_data <- rbind(
   threshold_counts_final[
-    threshold_counts_final$Scenario_final != "baseline",
+    threshold_counts_final$Scenario != "Baseline",
   ],
   baseline_repeated
 )
 
-# Set order of panels
+
+# Set plotting order
 plot_data$Intensity <- factor(
   plot_data$Intensity,
   levels = c("High", "Medium", "All")
 )
 
-# Set order of bars
 plot_data$Method <- factor(
   plot_data$Method,
   levels = c(
     "Baseline",
-    "Control (OD matched)",
+    "Random control (OD matched)",
     "Out-degree",
-    "Control (BT matched)",
+    "Random control (BT matched)",
     "Betweenness"
   )
 )
-```
 
-Plot figure
 
-```{r, fig.width = 12, fig.height = 4}
-# plot probability of sustained outbreak by intensity
+# Plot
 
-# order of windows
-threshold_counts_final$Intensity <- factor(
-  threshold_counts_final$Intensity,
-  levels = c("Baseline", "High", "Medium", "All")
-)
-ggplot(
+Prob_infected_plot <- ggplot(
   plot_data,
-  aes(x = Method,
-      y = Proportion_final,
-      fill = Method)
+  aes(
+    x = Method,
+    y = `Probability of >=10 infected farms`,
+    fill = Method
+  )
 ) +
-  geom_col(position = "dodge") +
+  geom_col(width = 0.7) +
   facet_wrap(~Intensity) +
   scale_y_continuous(labels = scales::percent) +
   labs(
+    title = "Probability of established outbreak by intervention strategy",
     x = "Intervention strategy",
-    y = "Probability of sustained outbreak (≥10 infected farms)"
+    y = "Probability of ≥10 infected farms",
+    fill = NULL
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 50, hjust = 1),
+    plot.margin = margin(10, 10, 25, 30)
+  )
+Prob_infected_plot
+```
+```{r}
+# main results table
+threshold_counts_final
+```
+```{r}
+ggsave(
+  "Prob_infected_plot.png", # can change to pdf
+  plot = Prob_infected_plot,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
 ```
 
-Relative Reduction
+
+https://search.r-project.org/R/refmans/stats/html/fisher.test.html
+
+Fishers exact test comparing outbreak proportions (not paired because using a pooled sim?)
+
+Pooled random control vs baseline
+Pooledrandom control vs targeted intervention
+
+create 2x2 table for each comparison - epi(>=10), no epi (<10)
+
+Create variables for fishers test tables:
 
 ```{r}
-# Duplicate baseline into each intensity panel for relative reduction plot
-
-baseline_reduction <- threshold_counts_final[
-  threshold_counts_final$Scenario_final == "baseline",
+# ct vs int
+control_exceeding <- threshold_counts_final$`Number of simulations >=10 infected farms`[
+  threshold_counts_final$Scenario == "Out_degree_high_random"
 ]
 
-baseline_reduction <- baseline_reduction[rep(1, 3), ]
+control_total <- threshold_counts_final$`Total simulations`[
+  threshold_counts_final$Scenario == "Out_degree_high_random"
+]
 
-baseline_reduction$Intensity <- c("High", "Medium", "All")
-baseline_reduction$Method <- "Baseline"
-baseline_reduction$Relative_reduction <- 0
+intervention_exceeding <- threshold_counts_final$`Number of simulations >=10 infected farms`[
+  threshold_counts_final$Scenario == "Outdegree_high"
+]
 
+intervention_total <- threshold_counts_final$`Total simulations`[
+  threshold_counts_final$Scenario == "Outdegree_high"
+]
 
-# Remove original baseline and add repeated baseline
-plot_reduction <- rbind(
-  threshold_counts_final[
-    threshold_counts_final$Scenario_final != "baseline",
-  ],
-  baseline_reduction
+# ORGANISED IN DIRECTION OF TEST
+test_matrix_ODhigh <- matrix(
+  c(
+    control_exceeding,
+    control_total - control_exceeding,
+    intervention_exceeding,
+    intervention_total - intervention_exceeding
+  ),
+  nrow = 2
 )
 
+fisher.test(test_matrix_ODhigh)
 
-# Set panel order
-plot_reduction$Intensity <- factor(
-  plot_reduction$Intensity,
-  levels = c("High", "Medium", "All")
-)
+# stat sig at 5% level
+```
+```{r}
+# AI code - how to automate to complete all 12 comparisons & present in one table
 
-
-# Set bar order
-plot_reduction$Method <- factor(
-  plot_reduction$Method,
-  levels = c(
-    "Baseline",
-    "Control (OD matched)",
-    "Out-degree",
-    "Control (BT matched)",
-    "Betweenness"
+run_fisher <- function(group1, group2) {
+  
+  x1 <- threshold_counts_final[
+    threshold_counts_final$Scenario == group1, ]
+  
+  x2 <- threshold_counts_final[
+    threshold_counts_final$Scenario == group2, ]
+  
+  test_matrix <- matrix(
+    c(
+      x1$`Number of simulations >=10 infected farms`,
+      x1$`Total simulations` - x1$`Number of simulations >=10 infected farms`,
+      x2$`Number of simulations >=10 infected farms`,
+      x2$`Total simulations` - x2$`Number of simulations >=10 infected farms`
+    ),
+    nrow = 2,
+    byrow = TRUE
   )
+  
+  test <- fisher.test(test_matrix)
+  
+  c(
+    Odds_ratio = unname(test$estimate),
+    CI_lower = test$conf.int[1],
+    CI_upper = test$conf.int[2],
+    P_value = test$p.value
+  )
+}
+```
+```{r}
+# Intervention vs matched random control
+intervention_control <- do.call(rbind, lapply(
+  pairs, function(x) run_fisher(x[1], x[2])
+))
+
+# Random control vs baseline
+control_baseline <- do.call(rbind, lapply(
+  random_controls, function(x) run_fisher(x, "Baseline")
+))
+
+intervention_control
+control_baseline
+```
+```{r}
+# AI - as exportable table
+all_fisher_tests <- rbind(
+  do.call(rbind, lapply(pairs, function(x) {
+    result <- run_fisher(x[1], x[2])
+    data.frame(
+      Comparison = paste(x[1], "vs", x[2]),
+      Odds_ratio = result["Odds_ratio"],
+      CI_lower = result["CI_lower"],
+      CI_upper = result["CI_upper"],
+      P_value = result["P_value"]
+    )
+  })),
+  
+  do.call(rbind, lapply(random_controls, function(x) {
+    result <- run_fisher(x, "Baseline")
+    data.frame(
+      Comparison = paste(x, "vs Baseline"),
+      Odds_ratio = result["Odds_ratio"],
+      CI_lower = result["CI_lower"],
+      CI_upper = result["CI_upper"],
+      P_value = result["P_value"]
+    )
+  }))
+)
+
+# Make the table easier to read
+all_fisher_tests$Odds_ratio <- round(as.numeric(all_fisher_tests$Odds_ratio), 2)
+all_fisher_tests$CI_lower <- round(as.numeric(all_fisher_tests$CI_lower), 2)
+all_fisher_tests$CI_upper <- round(as.numeric(all_fisher_tests$CI_upper), 2)
+all_fisher_tests$P_value <- signif(as.numeric(all_fisher_tests$P_value), 3)
+
+all_fisher_tests
+```
+```{r}
+# export
+write.csv(
+  all_fisher_tests,
+  "fisher_exact_results.csv",
+  row.names = FALSE
 )
 ```
-```{r, fig.width=12, fig.height=4}
-# plot relative reduction by intensity
+? considr multiple comparison correctio if comparing p-values?
 
-# order of windows
-#threshold_counts_final$Intensity <- factor(
-  #threshold_counts_final$Intensity,
-  #levels = c("High", "Medium", "All")
-#)
+1. effect of removing nodes at all = random ct vs baseline
+2. effect of which nodes are removed = int vs ct
 
-ggplot(
-  plot_reduction,
-  aes(x = Method,
-      y = Relative_reduction,
-      fill = Method)
-) +
-  geom_col(position = "dodge") +
-  facet_wrap(~Intensity) +
-  scale_y_continuous(labels = scales::percent) +
-  labs(
-    x = "Intervention strategy",
-    y = "Relative outbreak reduction vs baseline"
-  ) +
-  theme_bw()
-```
-
-Paired fishers tests
+so e.g. OD high vs OD high random (p<0.05) AND OD high random vs baseline p>0.05
+Evidence suggests that the selection of high outdegree nodes contributed to the reduction beyond the effect of removing nodes at random etc
 
 # RESULT 2
 
@@ -1401,7 +1894,7 @@ Filter established outbreaks:
 threshold_final <- 10
 
 established_outbreaks <- lapply(
-  sustained_trans,
+  sustained_trans,# already created for Q1
   function(x) x[x >= threshold_final]
 )
 ```
@@ -1415,25 +1908,31 @@ colnames(plot_sizes) <- c("Final_size", "Scenario")
 # scenario = intervention scenario
 ```
 ```{r}
-# add intervention method & intensity
+# add intervention method and intensity from Q1
+
 plot_sizes <- merge(
   plot_sizes,
-  threshold_counts_final[, c("Scenario_final", "Method", "Intensity")],
-  by.x = "Scenario",
-  by.y = "Scenario_final"
+  threshold_counts_final[, c("Scenario", "Method", "Intensity")],
+  by = "Scenario"
 )
-plot_sizes_stats <- plot_sizes # save a copy before duplication for stat analysis without baseline x3
+
+# Save before duplicating baseline
+plot_sizes_stats <- plot_sizes
 ```
-Baseline duplication - needed for faceted figure of panels
+
+```{r}
+# names(threshold_counts_final)
+```
+Baseline duplication - needed for 3 figure of panels
 
 ```{r}
 # duplicate baseline into every intensity panel
 
 # extract baseline
-baseline_sizes <- subset(plot_sizes, Scenario == "baseline")
+baseline_sizes <- subset(plot_sizes, Scenario == "Baseline")
 ```
 ```{r}
-# duplicate baseline
+# duplicate baseline into high/med/all panels
 baseline_sizes <- do.call(
   rbind,
   lapply(c("High", "Medium", "All"), function(i) {
@@ -1448,7 +1947,7 @@ baseline_sizes$Method <- "Baseline"
 ```{r}
 # remove original baseline & add duplicated baseline
 plot_sizes <- rbind(
-  subset(plot_sizes, Scenario != "baseline"),
+  subset(plot_sizes, Scenario != "Baseline"),
   baseline_sizes
 )
 ```
@@ -1474,7 +1973,7 @@ plot_sizes$Method <- factor(
 ```
 Boxplot
 
-```{r}
+```{r, width = 14, height = 5}
 # create boxplots
 
 ggplot(
@@ -1488,16 +1987,19 @@ ggplot(
   geom_boxplot() +
   facet_wrap(~Intensity) +
   labs(
+    title = "Final outbreak size by intevention strategy",
     x = "Intervention strategy",
-    y = "Final outbreak size (established outbreaks only)"
+    y = "Final outbreak size (established outbreaks)"
   ) +
   theme_bw() +
   theme(
     axis.text.x = element_text(
-      angle = 45,
+      angle = 50,
       hjust = 1
-    )
+    ),
+    plot.margin = margin(10,10,25,30)
   )
+
 ```
 Descriptive summary - median/IQR/mean etc
 
@@ -1506,17 +2008,27 @@ Descriptive summary - median/IQR/mean etc
 
 outbreak_summary <- data.frame(
   Scenario = names(established_outbreaks),
-  N = sapply(established_outbreaks, length), # how many sims exceeded threshold
+  N_established = sapply(established_outbreaks, length), # how many sims exceeded threshold
   Mean = sapply(established_outbreaks, mean), # average final outbreak size
+  Variance = sapply(established_outbreaks, var),
   Median = sapply(established_outbreaks, median), # median final outbreak size
-  SD = sapply(established_outbreaks, sd), # variability/standard deviation
+  #SD = sapply(established_outbreaks, sd), # variability/standard deviation
+  Q1 = sapply(established_outbreaks, quantile, probs = 0.25),
+  Q3 = sapply(established_outbreaks, quantile, probs = 0.75),
   Min = sapply(established_outbreaks, min), # range
   Max = sapply(established_outbreaks, max) # range
 )
 
 outbreak_summary
 ```
+among established outbreaks in OD_high, the median final outbreak size was 12 (IQR 11 - 15), compared to CT_OH_HIGH, with median final outbreak size of 14 (IQR 11 - 22)
 
+Check distributions - see if still strongly right skewed with filter - relevance of median/SD
+
+STATS - use plot_sizes_stats
+want to compare:
+  matched control to baseline
+  matched control to intervention
 STATS - poissons distribution
 
 https://r-coder.com/poisson-distribution-r/
@@ -1524,7 +2036,7 @@ https://r-coder.com/poisson-distribution-r/
 Visualise distributions - show that final outbreak sizes are not normally distributed - ?right skewed
 
 ```{r}
-# histogram of outbreak sizes
+# histogram of outbreak sizes - remember truncated at 10 - still right skewed
 ggplot(plot_sizes_stats,
        aes(x = Final_size)) +
   geom_histogram(
@@ -1539,9 +2051,27 @@ ggplot(plot_sizes_stats,
   ) +
   theme_bw()
 ```
+```{r}
+# Poisson assume mean = variance; N.B. have also truncated at 10
+# Check Poisson assumption: compare mean and variance
+poisson_check <- data.frame(
+  Scenario = names(established_outbreaks),
+  N_established = sapply(established_outbreaks, length),
+  Mean = sapply(established_outbreaks, mean),
+  Variance = sapply(established_outbreaks, var)
+)
+
+# Calculate variance-to-mean ratio
+poisson_check$Variance_to_mean <- 
+  poisson_check$Variance / poisson_check$Mean
+
+poisson_check
+```
 
 
-# RESULT 3
+LOOK AT MEAN AND VARIANCE - POISSON ASSUMES MEAN = VARIANCE. also is truncated is this an issue?
+
+# RESULT 3 - YOU ARE HERE ISSUES WITH CODE IDing PEAK INFECTIOUS
 c) peak infectious farms - how intense is outbreak IF THERE IS AN OUTBREAK - explain as above - mean/median peak without <1 sims
 
 When an epidemic occurs (threshold >=10 farms), how intense is it?
@@ -1549,6 +2079,37 @@ When an epidemic occurs (threshold >=10 farms), how intense is it?
 Only analyse successful epidemics
 
 Calculate peak infectious farms for every replicate
+```{r}
+# confirm exists
+#summary_results$SC8$peak_infectious
+```
+```{r}
+# create list of final outbreak sizes
+peak_infectious_sizes <- list(
+  Baseline = summary_results$SC1$peak_infectious,
+  
+  Outdegree_high = summary_results$SC2$peak_infectious,
+  Out_degree_high_random = summary_results$SC8$peak_infectious,
+  
+  Out_degree_med = summary_results$SC3$peak_infectious,
+  Out_degree_med_random = summary_results$SC9$peak_infectious,
+  
+  Outdegree_all = summary_results$SC4$peak_infectious,
+  Outdegree_all_random = summary_results$SC10$peak_infectious,
+  
+  Betweenness_high = summary_results$SC5$peak_infectious,
+  Betweenness_high_random = summary_results$SC11$peak_infectious,
+  
+  Betweenness_med =summary_results$SC6$peak_infectious,
+  Betweenness_med_random = summary_results$SC12$peak_infectious,
+  
+  Betweenness_all = summary_results$SC7$peak_infectious,
+  Betweenness_all_random = summary_results$SC13$peak_infectious
+)
+```
+```{r}
+#sapply(peak_infectious_sizes, length)
+```
 
 ```{r}
 # calculate peak infectious farms for every simulation = max number of infectious farms reached in each simulation
@@ -1558,7 +2119,7 @@ peak_infectious <- lapply(
     x %>%
       group_by(replicate) %>%
       summarise(
-        peak_infectious = max(infectious)
+        peak_infectious = max(infectious, na.rm = TRUE)
       )
   }
 )
@@ -1570,10 +2131,10 @@ Restrict to established epidemics
 # create dataframe with replicate/peak_inefctious/scenario
 
 peak_infectious_established <- lapply(
-  names(peak_infectious),
+  names(peak_infectious_sizes),
   function(scenario) {
     
-    peaks <- peak_infectious[[scenario]]
+    peaks <- peak_infectious_sizes[[scenario]]
     
     established <- summary_results[[scenario]] %>%
       filter(final_infected >= threshold_final) %>%
@@ -1595,7 +2156,7 @@ Create scenario look-up
 
 scenario_lookup <- data.frame(
   Scenario = c(
-    "SC1", "SC2", "SC3", "SC4", "SC5", "SC6", "SC7", "SC14", "SC15", "SC16", "SC17", "SC18", "SC19"
+    "SC1", "SC2", "SC3", "SC4", "SC5", "SC6", "SC7", "SC8", "SC9", "SC10", "SC11", "SC12", "SC13"
   ),
   Scenario_final = c(
     "baseline",  "OD_high", "OD_med", "OD_all", "BT_high", "BT_med", "BT_all", "CT_OD_HIGH", "CT_OD_MED", "CT_OD_ALL", "CT_BT_HIGH", "CT_BT_MED","CT_BT_ALL"
@@ -1615,11 +2176,11 @@ peak_infectious_established <- merge(
 
 peak_infectious_established <- merge(
   peak_infectious_established,
-  threshold_counts_final[, c("Scenario_final", "Method", "Intensity")],
-  by = "Scenario_final"
+  threshold_counts_final[, c("Scenario", "Method", "Intensity")],
+  by = "Scenario"
 )
 
-peak_infectious_stats <- peak_infectious_established # create copy for stats
+#peak_infectious_stats <- peak_infectious_established # create copy for stats
 ```
 Create the plotting copy
 
@@ -1629,6 +2190,27 @@ peak_infectious_plot <- peak_infectious_established
 
 nrow(peak_infectious_plot)
 # lower because has dropped scenarios 8-13
+```
+```{r}
+head(peak_infectious$SC1)
+head(summary_results$SC1)
+```
+```{r}
+sum(summary_results$SC1$final_infected >= 10)
+```
+```{r}
+table(summary_results$SC1$final_infected >= 10)
+```
+```{r}
+sapply(
+  summary_results[c("SC1","SC2","SC3","SC4","SC5","SC6","SC7",
+                    "SC8","SC9","SC10","SC11","SC12","SC13")],
+  function(x) sum(x$final_infected >= 10)
+)
+```
+```{r}
+names(daily_results)
+names(summary_results)
 ```
 Duplicate baseline for the three intensity panels
 
@@ -1696,7 +2278,7 @@ ggplot(
   facet_wrap(~Intensity) +
   labs(
     x = "Intervention strategy",
-    y = "Peak infectious farms (established outbreaks only)"
+    y = "Peak number infectious farms"
   )+
   theme_bw() +
   theme(
