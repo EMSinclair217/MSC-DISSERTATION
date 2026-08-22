@@ -35,6 +35,15 @@ scenario_5_results <- readRDS("scenario_5_results_corrected.rds") # Betweenness 
 scenario_6_results <- readRDS("scenario_6_results_corrected.rds") # Betweenness (med) >= 4 months
 scenario_7_results <- readRDS("scenario_7_results_corrected.rds") # Betweenness any month
 ```
+
+```{r}
+# CHECK: baseline imported results
+sum(sapply(
+  scenario_1_results,
+  function(x) x$summary$final_infected #>= 10
+))
+```
+
 ```{r}
 # Matched controls - Scenario 8: Control OD HIGH x10 (5 random farms removed)
 scenario_8a_results <- readRDS("scenario_8P_control_1_results.rds")
@@ -49,6 +58,28 @@ scenario_8i_results <- readRDS("scenario_8P_control_9_results.rds")
 scenario_8j_results <- readRDS("scenario_8P_control_10_results.rds")
   
 ```  
+
+```{r}
+# CHECK: SC8 imported results
+sum(sapply(
+  list(
+    scenario_8a_results,
+    scenario_8b_results,
+    scenario_8c_results,
+    scenario_8d_results,
+    scenario_8e_results,
+    scenario_8f_results,
+    scenario_8g_results,
+    scenario_8h_results,
+    scenario_8i_results,
+    scenario_8j_results
+  ),
+  function(x) {
+    sum(sapply(x, function(i) i$summary$final_infected >= 10))
+  }
+))
+```
+
 ```{r}
 # list of 2,000 simulation replicates & summary dataframe with each replicate
 #class(scenario_8a_results)
@@ -119,6 +150,37 @@ scenario_13h_results <- readRDS("scenario_13P_control_8_results.rds")
 scenario_13i_results <- readRDS("scenario_13P_control_9_results.rds")
 scenario_13j_results <- readRDS("scenario_13P_control_10_results.rds")
 ```
+
+```{r}
+# Put all scenario results into one list
+all_scenarios <- list(
+  SC1 = scenario_1_results,
+  SC2 = scenario_2_results,
+  SC3 = scenario_3_results,
+  SC4 = scenario_4_results,
+  SC5 = scenario_5_results,
+  SC6 = scenario_6_results,
+  SC7 = scenario_7_results
+)
+
+# Create empty lists to store outputs
+daily_results <- list()
+summary_results <- list()
+
+# Loop through scenarios
+for (scenario in names(all_scenarios)) {
+  
+  daily_results[[scenario]] <- bind_rows(
+    lapply(all_scenarios[[scenario]], function(x) x$daily)
+  )
+  
+  summary_results[[scenario]] <- bind_rows(
+    lapply(all_scenarios[[scenario]], function(x) x$summary)
+  )
+}
+
+# call individual with - summary_results$SC3 etc
+```
   
 # Pooled control & between-control variation
 
@@ -159,7 +221,7 @@ control_8_peakinfectious <- unlist(
 )
 ```
 ```{r}
-# create summary results for analysis - contains the 20000 individual pooled simulation summaries
+# create summary results for analysis - contains the 20000 individual pooled simulation summaries - adds it to summary_results created above
 # AI code - fixed nesting problem to keep column names
 summary_results$SC8 <- bind_rows(
   lapply(control_8_results_pooled, function(x) {
@@ -846,52 +908,13 @@ ggplot(control_13_variance, aes(x = Control, y = Mean)) +
     y = "Mean final outbreak size"
   )
 ```
-
 ```{r}
-# combine the daily outputs from all 2000 sim replicates into one data frame
-
-# daily result - epidemic curves for all 2000 stochastic runs
-daily_results_SC1 <- bind_rows( 
-  lapply(scenario_1_results, function(x) x$daily) 
-)
-# peak infectious and final outbreak size per run
-summary_results_SC1 <- bind_rows(
-  lapply(scenario_1_results, function(x) x$summary)
-)
+names(summary_results)
 ```
 ```{r}
-# Put all scenario results into one list
-all_scenarios <- list(
-  SC1 = scenario_1_results,
-  SC2 = scenario_2_results,
-  SC3 = scenario_3_results,
-  SC4 = scenario_4_results,
-  SC5 = scenario_5_results,
-  SC6 = scenario_6_results,
-  SC7 = scenario_7_results
-)
-
-# Create empty lists to store outputs
-daily_results <- list()
-summary_results <- list()
-
-# Loop through scenarios
-for (scenario in names(all_scenarios)) {
-  
-  daily_results[[scenario]] <- bind_rows(
-    lapply(all_scenarios[[scenario]], function(x) x$daily)
-  )
-  
-  summary_results[[scenario]] <- bind_rows(
-    lapply(all_scenarios[[scenario]], function(x) x$summary)
-  )
-}
-
-# call individual with - summary_results$SC3 etc
+sapply(summary_results, nrow)
 ```
-```{r}
-summary_results$SC3
-```
+
 # Read in data from RQ1 for number farms removed
 
 ```{r}
@@ -1964,9 +1987,9 @@ plot_sizes$Method <- factor(
   plot_sizes$Method,
   levels = c(
     "Baseline",
-    "Control (OD matched)",
+    "Random control (OD matched)",
     "Out-degree",
-    "Control (BT matched)",
+    "Random control (BT matched)",
     "Betweenness"
   )
 )
@@ -2037,6 +2060,7 @@ Visualise distributions - show that final outbreak sizes are not normally distri
 
 ```{r}
 # histogram of outbreak sizes - remember truncated at 10 - still right skewed
+# N.B. there are many more simulations in the controls hence the squished baseline/outdegree/betweenness data. Doesnt affect results analysis because not looking at the raw number of simulations
 ggplot(plot_sizes_stats,
        aes(x = Final_size)) +
   geom_histogram(
@@ -2050,6 +2074,25 @@ ggplot(plot_sizes_stats,
     y = "Number of simulations"
   ) +
   theme_bw()
+```
+```{r}
+sapply(established_outbreaks, length)
+```
+```{r}
+sapply(
+  summary_results,
+  function(x) sum(x$final_infected >= 10)
+)
+```
+```{r}
+outbreak_summary[, c("Scenario", "N_established")]
+```
+```{r}
+sapply(
+  summary_results[c("SC1","SC2","SC3","SC4","SC5","SC6","SC7",
+                    "SC8","SC9","SC10","SC11","SC12","SC13")],
+  function(x) sum(x$final_infected >= 10)
+)
 ```
 ```{r}
 # Poisson assume mean = variance; N.B. have also truncated at 10
@@ -2079,138 +2122,112 @@ When an epidemic occurs (threshold >=10 farms), how intense is it?
 Only analyse successful epidemics
 
 Calculate peak infectious farms for every replicate
+
 ```{r}
-# confirm exists
-#summary_results$SC8$peak_infectious
-```
-```{r}
-# create list of final outbreak sizes
-peak_infectious_sizes <- list(
-  Baseline = summary_results$SC1$peak_infectious,
-  
-  Outdegree_high = summary_results$SC2$peak_infectious,
-  Out_degree_high_random = summary_results$SC8$peak_infectious,
-  
-  Out_degree_med = summary_results$SC3$peak_infectious,
-  Out_degree_med_random = summary_results$SC9$peak_infectious,
-  
-  Outdegree_all = summary_results$SC4$peak_infectious,
-  Outdegree_all_random = summary_results$SC10$peak_infectious,
-  
-  Betweenness_high = summary_results$SC5$peak_infectious,
-  Betweenness_high_random = summary_results$SC11$peak_infectious,
-  
-  Betweenness_med =summary_results$SC6$peak_infectious,
-  Betweenness_med_random = summary_results$SC12$peak_infectious,
-  
-  Betweenness_all = summary_results$SC7$peak_infectious,
-  Betweenness_all_random = summary_results$SC13$peak_infectious
-)
-```
-```{r}
-#sapply(peak_infectious_sizes, length)
+threshold_peak_analysis <- 10
 ```
 
 ```{r}
-# calculate peak infectious farms for every simulation = max number of infectious farms reached in each simulation
-peak_infectious <- lapply(
-  daily_results,
-  function(x) {
-    x %>%
-      group_by(replicate) %>%
-      summarise(
-        peak_infectious = max(infectious, na.rm = TRUE)
-      )
-  }
+# create scenario mapping
+scenario_lookup <- c(
+  Baseline = "SC1",
+  
+  Outdegree_high = "SC2",
+  Out_degree_high_random = "SC8",
+  
+  Out_degree_med = "SC3",
+  Out_degree_med_random = "SC9",
+  
+  Outdegree_all = "SC4",
+  Outdegree_all_random = "SC10",
+  
+  Betweenness_high = "SC5",
+  Betweenness_high_random = "SC11",
+  
+  Betweenness_med = "SC6",
+  Betweenness_med_random = "SC12",
+  
+  Betweenness_all = "SC7",
+  Betweenness_all_random = "SC13"
 )
 ```
-Restrict to established epidemics
+Restrict to established epidemics:
+For each of hte 13 scenarios it:
+1. finds the appropriate 'summaryy$results$SC#'
+2. removes simulaitons where final_infected <10
+3. keeps the replicate and its corresponding peak_infectious
+4. labels it with the scenario name
+5. combines everything into one dataframe
 
 ```{r}
 # keep sims where threshold transmission occured
 # create dataframe with replicate/peak_inefctious/scenario
 
 peak_infectious_established <- lapply(
-  names(peak_infectious_sizes),
+  names(scenario_lookup),
   function(scenario) {
     
-    peaks <- peak_infectious_sizes[[scenario]]
+    # contains both final_infected and peak_infectious for same replicate - canfilter on final_infected and retain the corresponding peak_infectious
     
-    established <- summary_results[[scenario]] %>%
-      filter(final_infected >= threshold_final) %>%
-      select(replicate)
+    peaks <- summary_results[[scenario_lookup[[scenario]]]]
     
     peaks %>%
-      filter(replicate %in% established$replicate) %>%
+      filter(final_infected >= threshold_peak_analysis) %>%
+      select(replicate, peak_infectious) %>%
       mutate(Scenario = scenario)
   }
 )
 
 peak_infectious_established <- bind_rows(peak_infectious_established)
 ```
-
-Create scenario look-up
-
 ```{r}
-# create look up table to to map simulation names to scenario labels
-
-scenario_lookup <- data.frame(
-  Scenario = c(
-    "SC1", "SC2", "SC3", "SC4", "SC5", "SC6", "SC7", "SC8", "SC9", "SC10", "SC11", "SC12", "SC13"
-  ),
-  Scenario_final = c(
-    "baseline",  "OD_high", "OD_med", "OD_all", "BT_high", "BT_med", "BT_all", "CT_OD_HIGH", "CT_OD_MED", "CT_OD_ALL", "CT_BT_HIGH", "CT_BT_MED","CT_BT_ALL"
-  )
-)
+head(peak_infectious_established)
+```
+```{r}
+table(peak_infectious_established$Scenario)
 ```
 
-Add method/intensity labels
-
+Add method and intensity labels to the peak_infectious data by matching with scenario
 ```{r}
-# add method & intensity labels
 peak_infectious_established <- merge(
   peak_infectious_established,
-  scenario_lookup,
-  by = "Scenario"
+  threshold_counts_final[, c("Scenario", "Method", "Intensity")], # from threshold_counts_final only take these 3 columns
+  by = "Scenario" # & match the two dataframes wherever their scenario values are the same, and attach method & intensity
 )
-
-peak_infectious_established <- merge(
-  peak_infectious_established,
-  threshold_counts_final[, c("Scenario", "Method", "Intensity")],
-  by = "Scenario"
-)
-
-#peak_infectious_stats <- peak_infectious_established # create copy for stats
 ```
-Create the plotting copy
+```{r}
+tail(peak_infectious_established)
+```
+
+
+Create copies
 
 ```{r}
+# make separate copy of original dataset for stats 
+peak_infectious_stats <- peak_infectious_established
 #make separate copy for figures
 peak_infectious_plot <- peak_infectious_established
-
-nrow(peak_infectious_plot)
-# lower because has dropped scenarios 8-13
+```
+DIAGNOSTICS
+```{r}
+#head(summary_results$SC1)
 ```
 ```{r}
-head(peak_infectious$SC1)
-head(summary_results$SC1)
+#sum(summary_results$SC1$final_infected >= 10)
 ```
 ```{r}
-sum(summary_results$SC1$final_infected >= 10)
+#table(summary_results$SC1$final_infected >= 10)
 ```
 ```{r}
-table(summary_results$SC1$final_infected >= 10)
+#sapply(
+#  summary_results[c("SC1","SC2","SC3","SC4","SC5","SC6","SC7",
+#                    "SC8","SC9","SC10","SC11","SC12","SC13")],
+#  function(x) sum(x$final_infected >= 10)
+#)
 ```
 ```{r}
-sapply(
-  summary_results[c("SC1","SC2","SC3","SC4","SC5","SC6","SC7",
-                    "SC8","SC9","SC10","SC11","SC12","SC13")],
-  function(x) sum(x$final_infected >= 10)
-)
-```
-```{r}
-names(daily_results)
-names(summary_results)
+#names(daily_results)
+#names(summary_results)
 ```
 Duplicate baseline for the three intensity panels
 
@@ -2223,12 +2240,12 @@ baseline_peak <- subset(
   Method == "Baseline"
 )
 
-# Duplicate baseline into each intensity panel
+# Duplicate baseline into each intensity panel (3 copies)
 baseline_peak <- baseline_peak[
   rep(1:nrow(baseline_peak), 3),
 ]
 
-# assign intensity labels
+# assign intensity labels to copies
 baseline_peak$Intensity <- rep(
   c("High", "Medium", "All"),
   each = nrow(baseline_peak) / 3
@@ -2238,7 +2255,7 @@ baseline_peak$Intensity <- rep(
 baseline_peak$Method <- "Baseline"
 ```
 ```{r}
-# remove original baseline and add duplicated baseline back
+# remove original baseline and replace with 3 duplicated baseline versions
 peak_infectious_plot <- rbind(
   subset(peak_infectious_plot, Method != "Baseline"),
   baseline_peak
@@ -2247,17 +2264,19 @@ peak_infectious_plot <- rbind(
 Set plotting order
 
 ```{r}
-# set plotting order
+# set plotting intensity order
 peak_infectious_plot$Intensity <- factor(
   peak_infectious_plot$Intensity,
   levels = c("High", "Medium", "All")
 )
 
+# sets method order
 peak_infectious_plot$Method <- factor(
   peak_infectious_plot$Method,
-  levels = c("Baseline", "Control (OD matched)",
+  levels = c("Baseline", 
+             "Random control (OD matched)",
              "Out-degree",
-             "Control (BT matched)",
+             "Random control (BT matched)",
              "Betweenness"
              )
 )
@@ -2269,22 +2288,55 @@ Final boxplot
 ggplot(
   peak_infectious_plot,
   aes(
-    x = Method,
-    y = peak_infectious,
-    fill = Method
+    x = Method, # one boxplot per intervention/control method
+    y = peak_infectious, # distirbution of peak infectious farms
+    fill = Method # each method gets own colour
   )
 ) +
   geom_boxplot() +
-  facet_wrap(~Intensity) +
+  facet_wrap(~Intensity) + #creates 3 panels by intensity
   labs(
     x = "Intervention strategy",
-    y = "Peak number infectious farms"
+    y = "Peak number of infectious farms"
   )+
   theme_bw() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 ```
+
+```{r}
+unique(peak_infectious_established$Method)
+```
+```{r}
+unique(peak_infectious_established$Intensity)
+```
+```{r}
+table(
+  peak_infectious_established$Method,
+  useNA = "ifany"
+)
+```
+```{r}
+peak_infectious_summary <- peak_infectious_stats %>%
+  group_by(Scenario) %>%
+  summarise(
+    N_established = n(),
+    Mean = mean(peak_infectious),
+    Variance = var(peak_infectious),
+    Median = median(peak_infectious),
+    Q1 = quantile(peak_infectious, 0.25),
+    Q3 = quantile(peak_infectious, 0.75),
+    Min = min(peak_infectious),
+    Max = max(peak_infectious),
+    .groups = "drop"
+  )
+
+peak_infectious_summary
+
+# N.B. the differning number of N_established in controls will not bias the mean etc (the random control is likely a more precise estimate)
+```
+
 Non parametric distribution/densities - stat test choices
 Show densitiies non-parametric
 
