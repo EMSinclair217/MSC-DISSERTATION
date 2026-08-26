@@ -734,6 +734,7 @@ ggplot(results_RB, aes(
 ```
 
 # Change to transmission weight per animal and repeat sensitivity analysis on beta
+https://link.springer.com/article/10.1007/s41109-021-00354-x?utm_source=chatgpt.com
 
 ```{r}
 # Weighted SOIR model: beta is a per-animal transmission probability, so larger cattle batches have a higher probability of transmitting infection.

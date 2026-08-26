@@ -274,12 +274,12 @@ gtsave(
 ```{r}
 # AI prompt - how to turn this into 5 separate line plots in one panel with matching headers/axis labels to metric
 # plot variation over 12 periods
-png(
-  "network_metrics_12_periods.png",
-  width = 3000,
-  height = 2400,
-  res = 300
-)
+#png(
+  #"network_metrics_12_periods.png",
+  #width = 3000,
+  #height = 2400,
+  #res = 300
+#)
 
 par(
   mfrow = c(3, 3),
@@ -639,6 +639,43 @@ for(i in seq_along(monthly_metrics)){ # loops through each months network metric
   abline(v = cutoff_rank, col = "red", lty = 2, lwd = 2) # vertical dashed line a 5% threshold
 }
 ```
+```{r}
+# just one for write up
+i <- 6 # choose period
+# Open PNG device
+png("period_6_outdegree_elbow.png",
+    width = 2000,
+    height = 1500,
+    res = 300)
+
+m <- monthly_metrics[[i]]
+
+deg <- sort(m$outdegree, decreasing = TRUE)
+
+plot(deg,
+     type = "l",
+     lwd = 2,
+     xlab = "Farm rank",
+     ylab = "Out-degree",
+     main = paste("Period", i))
+
+cutoff_rank <- ceiling(0.05 * length(deg))
+
+abline(v = cutoff_rank,
+       col = "red", 
+       lty = 2, 
+       lwd = 2)
+
+text(cutoff_rank, 
+     max(deg)*0.9, # location of label
+     "Top 5% of farms",
+     col = "red",
+     pos = 4)
+
+
+# Finish saving the plot
+dev.off()
+```
 
 ```{r}
 # colour look-up
@@ -860,7 +897,7 @@ for(i in seq_along(monthly_metrics)){ # loops through each months network metric
        lwd = 2,
        xlab = "Farm rank",
        ylab = "Betweenness",
-       main = paste("Month", i))
+       main = paste("Period", i))
   
  # cutoff <- quantile(deg, 0.95) # this makes top 5% by quantile not count - DIFFERENT be sure to include in methodolgy
   
@@ -870,6 +907,43 @@ for(i in seq_along(monthly_metrics)){ # loops through each months network metric
 
   abline(v = cutoff_rank_BT, col = "red", lty = 2, lwd = 2) # vertical dashed line a 5% threshold
 }
+```
+```{r}
+# just one for write up
+i <- 6 # choose period
+
+# Open PNG device
+png("period_6_betweenness_elbow.png",
+    width = 2000,
+    height = 1500,
+    res = 300)
+
+m_BT <- monthly_metrics[[i]]
+
+deg_BT <- sort(m_BT$betweenness, decreasing = TRUE)
+
+plot(deg_BT,
+     type = "l",
+     lwd = 2,
+     xlab = "Farm rank",
+     ylab = "Betweenness",
+     main = paste("Period", i))
+
+cutoff_rank_BT <- ceiling(0.05 * length(deg_BT))
+
+abline(v = cutoff_rank_BT,
+       col = "red",
+       lty = 2,
+       lwd = 2)
+
+text(cutoff_rank, 
+     max(deg_BT)*0.9, # location of label
+     "Top 5% of farms",
+     col = "red",
+     pos = 4)
+
+# Finish saving the plot
+dev.off()
 ```
 ```{r}
 # Create colour lookup for all nodes across all months

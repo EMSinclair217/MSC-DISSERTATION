@@ -1896,7 +1896,7 @@ write.csv(
   row.names = FALSE
 )
 ```
-? considr multiple comparison correctio if comparing p-values?
+? consider multiple comparison correction if comparing p-values?
 
 1. effect of removing nodes at all = random ct vs baseline
 2. effect of which nodes are removed = int vs ct
@@ -2044,9 +2044,36 @@ outbreak_summary <- data.frame(
 
 outbreak_summary
 ```
+ADD 95% QUANTILE - plot as hist and red line at 0.95 - report median and 95th percentile.
+
 among established outbreaks in OD_high, the median final outbreak size was 12 (IQR 11 - 15), compared to CT_OH_HIGH, with median final outbreak size of 14 (IQR 11 - 22)
 
 Check distributions - see if still strongly right skewed with filter - relevance of median/SD
+
+looking at Q3 - baseline to ODrandom reduces almost 50% - good! etc
+ecdf(data) - if plot = empirical distirbution function. cumulative plot - can look at plot and se percentage at e.g 30. Put a grid on and plot comparison data in RED - look at maximum difference between the two lines. ANY DISTIRBUTION. 
+USE ks.test (x, j) - gives p-value PAIRWISE 
+plot(ecdf(kk),col='red', add TRUE)
+
+STATS  smirnoff test - ks.test(), same logic as fishers
+
+```{r}
+head(plot_sizes_stats)
+```
+```{r}
+unique(plot_sizes_stats$Scenario)
+```
+
+
+mention that student t-test is not applicable because is not Guassian. 
+
+INCLUDE THE NULL HYPOTHESIS IN WRITE UP
+H0= they are THE same distribution
+H1 - they are different
+
+?ks.test - to get refernces - birnbaum - first one OR USE book underneath. two sample smirnoff test https://www.geeksforgeeks.org/machine-learning/kolmogorov-smirnov-test-ks-test/
+
+DOESNT BASE ON MEAN
 
 STATS - use plot_sizes_stats
 want to compare:
@@ -2054,7 +2081,33 @@ want to compare:
   matched control to intervention
 STATS - poissons distribution
 
+```{r}
+plot_sizes_stats
+```
+```{r}
+jj <- plot_sizes_stats[plot_sizes_stats$Method == "Betweenness", ] # [rows, columns] - so giv me rows where intensity = baseline, and all columns
+#jj
+dput(jj$Final_size)
+#table(plot_sizes_stats$Intensity)
+```
+```{r}
+plot(jj$Final_size)
+# HIST()
+# PLOT(SORT()) - CHANGE CLASSES/BINS NCLASS = 
+```
+```{r}
+hist(jj$Final_size)
+```
+```{r}
+plot(sort(jj$Final_size))
+```
+```{r}
+kk <- plot_sizes_stats[plot_sizes_stats$Intensity == "Outdegree_high", ]
+kk
+```
+
 https://r-coder.com/poisson-distribution-r/
+https://rstudio-pubs-static.s3.amazonaws.com/1047952_9306ae04c1de4543812af559d777dd72.html
 
 Visualise distributions - show that final outbreak sizes are not normally distributed - ?right skewed
 
@@ -2094,6 +2147,9 @@ sapply(
   function(x) sum(x$final_infected >= 10)
 )
 ```
+
+Mean = average value
+Variance = how spread outthe values are around the mean (takes difference between each value and the mean, squaring those differences and averaging them)
 ```{r}
 # Poisson assume mean = variance; N.B. have also truncated at 10
 # Check Poisson assumption: compare mean and variance
@@ -2110,10 +2166,16 @@ poisson_check$Variance_to_mean <-
 
 poisson_check
 ```
-
+e.g. in baseline, variance is over 8x lager than mean.
+Poisson assumes lambda = mean (?)
+poisson distribution is used to model the number of events that occur in a Poisson process. X ~ P(lambda), this is a random variable with poisson distirbution where the mean numeber of events that occur at a given interval is lambda (mean?)
 
 LOOK AT MEAN AND VARIANCE - POISSON ASSUMES MEAN = VARIANCE. also is truncated is this an issue?
 
+```{r}
+poisson_model <- glm(
+)
+```
 # RESULT 3 - YOU ARE HERE ISSUES WITH CODE IDing PEAK INFECTIOUS
 c) peak infectious farms - how intense is outbreak IF THERE IS AN OUTBREAK - explain as above - mean/median peak without <1 sims
 
