@@ -298,10 +298,13 @@ ggplot(control_8_variance, aes(x = Control, y = Mean)) +
     x = "Random control simulation",
     y = "Mean final outbreak size"
   )
+
+
+
 ```
 ```{r}
 # add boxplot to show distribution (AI)
-ggplot(control_8_variance, aes(x = 1, y = Mean)) +
+boxplot_c8 <- ggplot(control_8_variance, aes(x = 1, y = Mean)) +
   geom_boxplot(width = 0.25, alpha = 0.2) +
   geom_jitter(width = 0.05, size = 3) +
   geom_hline(
@@ -318,6 +321,17 @@ ggplot(control_8_variance, aes(x = 1, y = Mean)) +
     breaks = 1,
     labels = "10 matched random controls"
   )
+
+boxplot_c8
+
+ggsave(
+  filename = "boxplot_cx_var.png",
+  plot = boxplot_c8,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 ```
 State - across the ten random control configurations, the median final outbreak size was 1 (IQR= 0) in all configurations, while mean oubtreak sizes were also similar, indicating limited variation between random control configurations - APPENDIX
 
@@ -435,7 +449,7 @@ ggplot(control_9_variance, aes(x = Control, y = Mean)) +
 ```
 ```{r}
 # add boxplot to show distribution (AI)
-ggplot(control_9_variance, aes(x = 1, y = Mean)) +
+boxplot_c9 <- ggplot(control_9_variance, aes(x = 1, y = Mean)) +
   geom_boxplot(width = 0.25, alpha = 0.2) +
   geom_jitter(width = 0.05, size = 3) +
   geom_hline(
@@ -444,14 +458,25 @@ ggplot(control_9_variance, aes(x = 1, y = Mean)) +
   ) +
   theme_bw() +
   labs(
-    title = "Scenario 9: consistency across matched random controls",
+    title = "Scenario 9: consistency across random controls",
     x = NULL,
     y = "Mean final outbreak size"
   ) +
   scale_x_continuous(
     breaks = 1,
-    labels = "10 matched random controls"
+    labels = "10 random controls"
   )
+
+boxplot_c9
+
+ggsave(
+  filename = "boxplot_c9_var.png",
+  plot = boxplot_c9,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 ```
 
 
@@ -568,6 +593,37 @@ ggplot(control_10_variance, aes(x = Control, y = Mean)) +
     y = "Mean final outbreak size"
   )
 ```
+```{r}
+# add boxplot to show distribution (AI)
+boxplot_c10 <- ggplot(control_10_variance, aes(x = 1, y = Mean)) +
+  geom_boxplot(width = 0.25, alpha = 0.2) +
+  geom_jitter(width = 0.05, size = 3) +
+  geom_hline(
+    yintercept = control_10_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 10: consistency across random controls",
+    x = NULL,
+    y = "Mean final outbreak size"
+  ) +
+  scale_x_continuous(
+    breaks = 1,
+    labels = "10 random controls"
+  )
+
+boxplot_c10
+
+ggsave(
+  filename = "boxplot_c10_var.png",
+  plot = boxplot_c10,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+```
 
 ```{r}
 # SCENARIO 11
@@ -682,6 +738,38 @@ ggplot(control_11_variance, aes(x = Control, y = Mean)) +
     y = "Mean final outbreak size"
   )
 ```
+```{r}
+# add boxplot to show distribution (AI)
+boxplot_c11 <- ggplot(control_11_variance, aes(x = 1, y = Mean)) +
+  geom_boxplot(width = 0.25, alpha = 0.2) +
+  geom_jitter(width = 0.05, size = 3) +
+  geom_hline(
+    yintercept = control_11_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 11: consistency across random controls",
+    x = NULL,
+    y = "Mean final outbreak size"
+  ) +
+  scale_x_continuous(
+    breaks = 1,
+    labels = "10 random controls"
+  )
+
+boxplot_c11
+
+ggsave(
+  filename = "boxplot_c11_var.png",
+  plot = boxplot_c11,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+```
+
 
 ```{r}
 # SCENARIO 12
@@ -794,6 +882,37 @@ ggplot(control_12_variance, aes(x = Control, y = Mean)) +
     x = "Random control simulation",
     y = "Mean final outbreak size"
   )
+```
+```{r}
+# add boxplot to show distribution (AI)
+boxplot_c12 <- ggplot(control_12_variance, aes(x = 1, y = Mean)) +
+  geom_boxplot(width = 0.25, alpha = 0.2) +
+  geom_jitter(width = 0.05, size = 3) +
+  geom_hline(
+    yintercept = control_12_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 12: consistency across random controls",
+    x = NULL,
+    y = "Mean final outbreak size"
+  ) +
+  scale_x_continuous(
+    breaks = 1,
+    labels = "10 random controls"
+  )
+
+boxplot_c12
+
+ggsave(
+  filename = "boxplot_c12_var.png",
+  plot = boxplot_c12,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 ```
 
 ```{r}
@@ -913,6 +1032,37 @@ names(summary_results)
 ```
 ```{r}
 sapply(summary_results, nrow)
+```
+```{r}
+# add boxplot to show distribution (AI)
+boxplot_c13 <- ggplot(control_13_variance, aes(x = 1, y = Mean)) +
+  geom_boxplot(width = 0.25, alpha = 0.2) +
+  geom_jitter(width = 0.05, size = 3) +
+  geom_hline(
+    yintercept = control_13_summary_pooled$Mean,
+    linetype = "dashed"
+  ) +
+  theme_bw() +
+  labs(
+    title = "Scenario 13: consistency across random controls",
+    x = NULL,
+    y = "Mean final outbreak size"
+  ) +
+  scale_x_continuous(
+    breaks = 1,
+    labels = "10 random controls"
+  )
+
+boxplot_c13
+
+ggsave(
+  filename = "boxplot_c13_var.png",
+  plot = boxplot_c13,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 ```
 
 # Read in data from RQ1 for number farms removed
@@ -1058,207 +1208,6 @@ scenario_table
 ```
 ```{r}
 total_farms
-```
-
-# 2. show change in largest connected component - GWCC - show removal of potential transmission pathways (undirected) - did removal change the movement network
-
-load and construct the annual network
-```{r}
-# modify graph/network code from RQ1.Rmd
-create_movement_network <- function(df) {
-
-  # Convert IDs to character values
-  df$org_id  <- as.character(df$org_id)
-  df$dest_id <- as.character(df$dest_id)
-
-  # create node list containing orgs & dest & their types
-  org_nodes <- df[, c("org_id", "org_type")]
-  colnames(org_nodes) <- c("name", "type")
-
-  dest_nodes <- df[, c("dest_id", "dest_type")]
-  colnames(dest_nodes) <- c("name", "type")
-
-  nodes <- unique(rbind(org_nodes, dest_nodes))
-
-  # creates directed edges 
-  edges <- df[, c("org_id", "dest_id")]
-
-  # Create directed network
-  g <- graph_from_data_frame(
-    d = edges,
-    vertices = nodes,
-    directed = TRUE
-  )
-
-  # Add edge weight as total cattle
-  E(g)$weight <- df$total_cattle
-
-  return(g)
-}
-```
-
-```{r}
-# import data
-annual_movement <- read.csv("RQ1 NO EP.csv")
-head(annual_movement)
-```
-
-
-```{r}
-# create as graph network by calling function = construct annual movement network
-annual_network = create_movement_network(annual_movement)
-```
-```{r}
-# inspect the network
-vcount(annual_network)
-
-V(annual_network)$name
-```
-
-Calculate baseline GWCC (network connectivity)
-```{r}
-# calculate basline GWCC
-baseline_gwcc <- max(components(annual_network, mode = "weak")$csize) # csize = extract number of farms in each connected component
-baseline_gwcc
-```
-Generate random removal controls
-
-```{r}
-# create random removal controls
-# removal-size controls representing the typical number of farms removed across each persistence category
-
-Control_high_random <- sample(
-  V(annual_network)$name,
-  size = 4,
-  replace = FALSE
-)
-
-Control_medium_random <- sample(
-  V(annual_network)$name,
-  size = 9,
-  replace = FALSE
-)
-
-Control_all_random <- sample(
-  V(annual_network)$name,
-  size = 40,
-  replace = FALSE
-)
-# ADD HERE IF WANT TO PUT CONTROLS PER SCENARIO RATHER THAN AVERAGES
-```
-Define all removal scenarios
-
-```{r}
-# create loop to speed up
-removal_scenarios <- list(
-  S2 = OD_high_candidates,
-  S3 = OD_med_candidates,
-  S4 = OD_all_candidates,
-  S5 = BT_high_candidates,
-  S6 = BT_med_candidates,
-  S7 = BT_all_candidates
-  #S8 = CB_high_candidates,
-  #S9 = CB_med_candidates,
-  #S10 = CB_all_candidates,
-  #S11 = Control_high_random,
-  #S12 = Control_medium_random,
-  #S13 = Control_all_random,
-  #Annual_Bt_FIVE = annual_BT_top5,
-  #Annual_OD_FIVE = annual_OD_top5,
-  #Annual_OD_deg = annual_OD_top5_deg
-  #SC14 = NEED TO ADD THESE
-  #SC15 = 
-  #SC16 = 
-  #SC17 = 
-  #SC18 = 
-  #SC19 = 
-)
-
-```
-
-Create empty results dataframe & apply each removal scenario & calculate network fragmentation
-
-```{r}
-gwcc_results <- data.frame(
-  Scenario = character(),
-  Farms_removed = numeric(),
-  GWCC_size = numeric(),
-  GWCC_percentage_remaining = numeric(),
-  Number_components = numeric()
-)
-
-#total_farms_nw = vcount(annual_network)
-
-for (s in names(removal_scenarios)) {
-  
-  removed_network <- delete_vertices( # deletes selected farms from the network
-    annual_network,
-    removal_scenarios[[s]]
-  )
-  
-  comp <- components(removed_network, mode = "weak") # finds all weakly connected components
-  
-  farms_remaining <- vcount(removed_network) # counts how many farms remain
-  
-  gwcc_size <-max(comp$csize) # find size of largest component (GWCC size)
-  
-  gwcc_percent <- (gwcc_size / farms_remaining) * 100 # this is GWCC size (% of farms remaining), NOT percentage of original network
-  
-  # store results in gwcc_results
-  gwcc_results <- rbind(
-    gwcc_results,
-    data.frame(
-      Scenario = s,
-      Farms_removed = length(removal_scenarios[[s]]),
-      GWCC_size = gwcc_size,
-      GWCC_percentage_remaining = gwcc_percent,
-      Number_components = comp$no
-    )
-  )
-}
-```
-Calculate baseline network components again & add the baseline network to the scenario results
-
-```{r}
-# calculate baseline network components
-baseline_comp <- components(annual_network, mode = "weak")
-
-#baseline_gwcc <- max(baseline_comp$csize)
-
-#baseline_percent <- (baseline_gwcc / vcount(annual_network)) * 100
-
-#baseline_components <- baseline_comp$no
-
-# add baseline GWCC as S1
-gwcc_results <- rbind(
-  data.frame(
-    Scenario = "S1",
-    Farms_removed = 0,
-    GWCC_size = max(baseline_comp$csize),
-    GWCC_percentage_remaining = (max(baseline_comp$csize) / vcount(annual_network))*100,
-    Number_components = baseline_comp$no
-  ),
-  
-  gwcc_results
-)
-```
-View final conenctivity results
-```{r}
-gwcc_results
-```
-Clear the results object
-```{r}
-# REMOVE RESULTS
-rm(gwcc_results)
-```
-Final network membership checks - check whether the farms in annual_OD_top5 actually exist in the annual  network
-```{r}
-# count how many of those farms are present
-sum(annual_OD_top5 %in% V(annual_network)$name)
-```
-```{r}
-length(annual_OD_top5)
-length(intersect(annual_OD_top5, V(annual_network)$name))
 ```
 
 ## SOIR Epidemic outcome analysis ##
@@ -1438,6 +1387,7 @@ ggplot(threshold_10,
     legend.position = "none"
   )
 ```
+
 ```{r}
 #AI - how to make grouped bar plot to show pairs
 ```
@@ -1733,7 +1683,13 @@ Prob_infected_plot <- ggplot(
   )
 ) +
   geom_col(width = 0.7) +
-  facet_wrap(~Intensity) +
+  facet_wrap(~Intensity,
+             labeller = as_labeller(c(
+               High = "Highly persistent",
+               Medium = "Persistent",
+               All= "Transient"
+             ))
+             ) +
   scale_y_continuous(labels = scales::percent) +
   labs(
     title = "Probability of established outbreak by intervention strategy",
@@ -1999,7 +1955,7 @@ Boxplot
 ```{r, width = 14, height = 5}
 # create boxplots
 
-ggplot(
+result2_plot <- ggplot(
   plot_sizes,
   aes(
     x = Method,
@@ -2008,7 +1964,13 @@ ggplot(
   )
 ) +
   geom_boxplot() +
-  facet_wrap(~Intensity) +
+  facet_wrap(~Intensity,
+             labeller = as_labeller(c(
+               High = "Highly persistent",
+               Medium = "Persistent",
+               All = "Transient"
+             ))
+             ) +
   labs(
     title = "Final outbreak size by intevention strategy",
     x = "Intervention strategy",
@@ -2023,11 +1985,23 @@ ggplot(
     plot.margin = margin(10,10,25,30)
   )
 
+# display plot
+result2_plot
+
+ggsave(
+  filename = "Result2_boxplots.png",
+  plot = result2_plot,
+  width = 14,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
+
 ```
 Descriptive summary - median/IQR/mean etc
 
 ```{r}
-# summarise outbreak sizes
+# summarise outbreak sizes 
 
 outbreak_summary <- data.frame(
   Scenario = names(established_outbreaks),
@@ -2038,11 +2012,20 @@ outbreak_summary <- data.frame(
   #SD = sapply(established_outbreaks, sd), # variability/standard deviation
   Q1 = sapply(established_outbreaks, quantile, probs = 0.25),
   Q3 = sapply(established_outbreaks, quantile, probs = 0.75),
+  P95 = sapply(established_outbreaks,quantile,probs = 0.95,names = FALSE
+  ),
   Min = sapply(established_outbreaks, min), # range
   Max = sapply(established_outbreaks, max) # range
 )
 
 outbreak_summary
+```
+```{r}
+write.csv(
+  outbreak_summary,
+  "result_two_outbreak_summary.csv",
+  row.names = FALSE
+)
 ```
 ADD 95% QUANTILE - plot as hist and red line at 0.95 - report median and 95th percentile.
 
@@ -2106,76 +2089,196 @@ kk <- plot_sizes_stats[plot_sizes_stats$Intensity == "Outdegree_high", ]
 kk
 ```
 
-https://r-coder.com/poisson-distribution-r/
-https://rstudio-pubs-static.s3.amazonaws.com/1047952_9306ae04c1de4543812af559d777dd72.html
+KS test - compares distirbution of final outbreak sizes between two groups. Given that an outbreak became established (>=10 farms), does the intervenetion/control change hte distribution of outbreak size?
 
-Visualise distributions - show that final outbreak sizes are not normally distributed - ?right skewed
+using established outbreaks only:
 
 ```{r}
-# histogram of outbreak sizes - remember truncated at 10 - still right skewed
-# N.B. there are many more simulations in the controls hence the squished baseline/outdegree/betweenness data. Doesnt affect results analysis because not looking at the raw number of simulations
-ggplot(plot_sizes_stats,
-       aes(x = Final_size)) +
-  geom_histogram(
-    bins = 30,
-    fill = "steelblue",
-    colour = "black"
+# check established_outbreaks
+
+established_outbreaks <- lapply(
+  sustained_trans,
+  function(x) x[x >= threshold_final]
+)
+#established_outbreaks
+```
+```{r}
+# create the KS function - adapted from run_fisher() function
+
+# tells the max difference between two cumulative distributions of final outbreak size
+
+run_ks <- function(group1, group2) {
+  
+  x1 <- established_outbreaks[[group1]]
+  x2 <- established_outbreaks[[group2]]
+  
+  test <- ks.test(
+    x1,
+    x2,
+    alternative = "two.sided",
+    exact = FALSE # don't calculate exact p-value, there are replicates in distribution numbers see note at end
+  )
+  
+  c(
+    KS_statistic = unname(test$statistic),
+    P_value = test$p.value
+  )
+}
+```
+```{r}
+# intervention vs matched random control - use existing 'pairs' from fishers tests
+ks_intervention_control <- do.call(
+  rbind,
+  lapply(pairs, function(x) {
+    run_ks(x[1], x[2])
+  })
+)
+
+ks_intervention_control
+```
+```{r}
+# random control vs baseline
+ks_control_baseline <- do.call(
+  rbind,
+  lapply(random_controls, function(x) {
+    run_ks(x, "Baseline")
+  })
+)
+
+ks_control_baseline
+```
+```{r}
+# put everything into one tabl
+all_ks_tests <- rbind(
+  
+  # Intervention vs matched random control
+  do.call(rbind, lapply(pairs, function(x) {
+    
+    result <- run_ks(x[1], x[2])
+    
+    data.frame(
+      Comparison = paste(x[1], "vs", x[2]),
+      KS_statistic = result["KS_statistic"],
+      P_value = result["P_value"]
+    )
+  })),
+  
+  # Random control vs baseline
+  do.call(rbind, lapply(random_controls, function(x) {
+    
+    result <- run_ks(x, "Baseline")
+    
+    data.frame(
+      Comparison = paste(x, "vs Baseline"),
+      KS_statistic = result["KS_statistic"],
+      P_value = result["P_value"]
+    )
+  }))
+)
+
+# Round for presentation
+all_ks_tests$KS_statistic <- round(
+  as.numeric(all_ks_tests$KS_statistic), 3
+)
+
+all_ks_tests$P_value <- signif(
+  as.numeric(all_ks_tests$P_value), 3
+)
+
+all_ks_tests
+```
+```{r}
+write.csv(
+  all_ks_tests,
+  "all_ks_tests1.csv",
+  row.names = FALSE
+)
+```
+this error: p-value will be approximate.... not true error but cautious of presenting KS p-values as if they are exact. occurs because final outbreak size is a discrete count of farms, so some values can occur many times - the repeated values are ties, and standard KS test's exact p-values calculation assumes continous distribution without ties
+
+Differences in the distributions of final outbreak size among established outbreaks were asesesd using two-sided two-sample Kolmogorov-Smirnoff tests. as final outbreak size was a discrete count outcome with tied values, asymptomatic p-values were used. 
+
+```{r}
+scenario_labels <- c( # SEE TABLE IN METHODOLGOY FOR PAIRS
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F"
+)
+```
+```{r}
+# Create data for intervention vs matched random-control pairs
+ecdf_data <- do.call(
+  rbind,
+  lapply(seq_along(pairs), function(i) {
+    
+    intervention <- pairs[[i]][1]
+    control <- pairs[[i]][2]
+    
+    data.frame(
+      Final_size = c(
+        established_outbreaks[[intervention]],
+        established_outbreaks[[control]]
+      ),
+      Scenario = c(
+        rep(
+          "Targeted intervention",
+          length(established_outbreaks[[intervention]])
+        ),
+        rep(
+          "Corresponding random control",
+          length(established_outbreaks[[control]])
+        )
+      ),
+      Comparison = scenario_labels[i]
+    )
+  })
+)
+
+# ECDF plot
+ecdf_intervention_control <- ggplot(
+  ecdf_data,
+  aes(
+    x = Final_size,
+    colour = Scenario
+  )
+) +
+  stat_ecdf(linewidth = 1) +
+  facet_wrap(
+    ~Comparison,
+    ncol = 3
   ) +
-  facet_wrap(~Method) +
+  coord_cartesian(xlim = c(10, NA)) +
   labs(
-    x = "Final outbreak size (established outbreaks only)",
-    y = "Number of simulations"
+    title = "Final outbreak size by intervention strategy",
+    x = "Final outbreak size (established outbreaks)",
+    y = "Cumulative proportion (established outbreaks)",
+    colour = NULL
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 11)
+  )
+
+ecdf_intervention_control
 ```
 ```{r}
-sapply(established_outbreaks, length)
-```
-```{r}
-sapply(
-  summary_results,
-  function(x) sum(x$final_infected >= 10)
+ggsave(
+  filename = "ECDF_intervention_vs_control.png",
+  plot = ecdf_intervention_control,
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 300
 )
 ```
-```{r}
-outbreak_summary[, c("Scenario", "N_established")]
-```
-```{r}
-sapply(
-  summary_results[c("SC1","SC2","SC3","SC4","SC5","SC6","SC7",
-                    "SC8","SC9","SC10","SC11","SC12","SC13")],
-  function(x) sum(x$final_infected >= 10)
-)
-```
+e.g. at 20 infected farms:
+Intervention = 1 => 100% of established intervention simulations had a final outbreak size of 20 farms or fewer.
+Control = 0.6 => 60% of established control simulations had a final outbreak size of 20 farms or fewer
 
-Mean = average value
-Variance = how spread outthe values are around the mean (takes difference between each value and the mean, squaring those differences and averaging them)
-```{r}
-# Poisson assume mean = variance; N.B. have also truncated at 10
-# Check Poisson assumption: compare mean and variance
-poisson_check <- data.frame(
-  Scenario = names(established_outbreaks),
-  N_established = sapply(established_outbreaks, length),
-  Mean = sapply(established_outbreaks, mean),
-  Variance = sapply(established_outbreaks, var)
-)
-
-# Calculate variance-to-mean ratio
-poisson_check$Variance_to_mean <- 
-  poisson_check$Variance / poisson_check$Mean
-
-poisson_check
-```
-e.g. in baseline, variance is over 8x lager than mean.
-Poisson assumes lambda = mean (?)
-poisson distribution is used to model the number of events that occur in a Poisson process. X ~ P(lambda), this is a random variable with poisson distirbution where the mean numeber of events that occur at a given interval is lambda (mean?)
-
-LOOK AT MEAN AND VARIANCE - POISSON ASSUMES MEAN = VARIANCE. also is truncated is this an issue?
-
-```{r}
-poisson_model <- glm(
-)
-```
+i.e. what proportion of simulated outbreaks are at or below this outbreak size 
 # RESULT 3 - YOU ARE HERE ISSUES WITH CODE IDing PEAK INFECTIOUS
 c) peak infectious farms - how intense is outbreak IF THERE IS AN OUTBREAK - explain as above - mean/median peak without <1 sims
 
@@ -2241,6 +2344,23 @@ peak_infectious_established <- lapply(
 )
 
 peak_infectious_established <- bind_rows(peak_infectious_established)
+```
+```{r}
+names(scenario_lookup)
+scenario_lookup
+```
+```{r}
+lapply(
+  names(scenario_lookup),
+  function(scenario) {
+    list(
+      scenario = scenario,
+      lookup = scenario_lookup[[scenario]],
+      class = class(summary_results[[scenario_lookup[[scenario]]]]),
+      is_null = is.null(summary_results[[scenario_lookup[[scenario]]]])
+    )
+  }
+)
 ```
 ```{r}
 head(peak_infectious_established)
@@ -2347,7 +2467,7 @@ Final boxplot
 
 ```{r}
 # plot
-ggplot(
+boxplot_PI <- ggplot(
   peak_infectious_plot,
   aes(
     x = Method, # one boxplot per intervention/control method
@@ -2356,7 +2476,13 @@ ggplot(
   )
 ) +
   geom_boxplot() +
-  facet_wrap(~Intensity) + #creates 3 panels by intensity
+  facet_wrap(~Intensity,
+             labeller = as_labeller(c(
+               High = "Highly persistent",
+               Medium = "Persistent",
+               All = "Transient"
+             ))
+             ) + #creates 3 panels by intensity
   labs(
     x = "Intervention strategy",
     y = "Peak number of infectious farms"
@@ -2365,6 +2491,17 @@ ggplot(
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+
+boxplot_PI
+
+ggsave(
+  filename = "peak_infectious_boxplot.png",
+  plot = boxplot_PI,
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 ```
 
 ```{r}
@@ -2417,6 +2554,191 @@ ggplot(peak_infectious_plot,
   theme_bw()
 ```
 
-Stats - poissons distribution
+ KS TEST STATS
+ 1. summary statistics
+ 
+```{r}
+ peak_infectious_summary <- peak_infectious_stats %>%
+  group_by(Scenario) %>%
+  summarise(
+    N_established = n(),
+    Median = median(peak_infectious),
+    P95 = quantile(peak_infectious, 0.95),
+    .groups = "drop"
+  )
 
+peak_infectious_summary
+```
+```{r}
+write.csv(
+  peak_infectious_summary,
+  "peak_infectious_summary.csv",
+  row.names = FALSE
+)
+```
+ 
+ 2. ECDF plots: targeted intervetion vs random control 
+ 
+```{r}
+scenario_labels <- c(
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F"
+)
 
+ecdf_peak_data <- do.call(
+  rbind,
+  lapply(seq_along(pairs), function(i) {
+    
+    intervention <- pairs[[i]][1]
+    control <- pairs[[i]][2]
+    
+    data.frame(
+      Peak_infectious = c(
+        peak_infectious_established$peak_infectious[
+          peak_infectious_established$Scenario == intervention
+        ],
+        peak_infectious_established$peak_infectious[
+          peak_infectious_established$Scenario == control
+        ]
+      ),
+      Scenario = c(
+        rep(
+          "Targeted intervention",
+          sum(peak_infectious_established$Scenario == intervention)
+        ),
+        rep(
+          "Matched random control",
+          sum(peak_infectious_established$Scenario == control)
+        )
+      ),
+      Comparison = scenario_labels[i]
+    )
+  })
+)
+```
+```{r}
+ecdf_peak <- ggplot(
+  ecdf_peak_data,
+  aes(
+    x = Peak_infectious,
+    colour = Scenario
+  )
+) +
+  stat_ecdf(linewidth = 1) +
+  facet_wrap(~Comparison, ncol = 3) +
+  labs(
+    title = "Peak number of infectious farms by intervention strategy",
+    x = "Peak number of infectious farms (established outbreaks)",
+    y = "Cumulative proportion (established outbreaks)",
+    colour = NULL
+  ) +
+  theme_bw()
+
+ecdf_peak
+```
+```{r}
+ggsave(
+  "ECDF_peak_infectious_intervention_vs_control.png",
+  ecdf_peak,
+  width = 8,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+```
+ 
+ 3. KS tests: same pairwise ocmparisons
+```{r}
+run_ks_peak <- function(group1, group2) {
+  
+  x1 <- peak_infectious_established$peak_infectious[
+    peak_infectious_established$Scenario == group1
+  ]
+  
+  x2 <- peak_infectious_established$peak_infectious[
+    peak_infectious_established$Scenario == group2
+  ]
+  
+  test <- ks.test(
+    x1,
+    x2,
+    alternative = "two.sided",
+    exact = FALSE
+  )
+  
+  c(
+    KS_statistic = unname(test$statistic),
+    P_value = test$p.value
+  )
+}
+```
+```{r}
+# 6 intervention vs matched- control comparisons
+ks_peak_intervention_control <- do.call(
+  rbind,
+  lapply(pairs, function(x) {
+    run_ks_peak(x[1], x[2])
+  })
+)
+
+ks_peak_intervention_control
+```
+```{r}
+# 6 random control v baseline
+ks_peak_control_baseline <- do.call(
+  rbind,
+  lapply(random_controls, function(x) {
+    run_ks_peak(x, "Baseline")
+  })
+)
+
+ks_peak_control_baseline
+```
+```{r}
+# combine
+all_ks_peak_tests <- rbind(
+  
+  do.call(rbind, lapply(pairs, function(x) {
+    
+    result <- run_ks_peak(x[1], x[2])
+    
+    data.frame(
+      Comparison = paste(x[1], "vs", x[2]),
+      KS_statistic = result["KS_statistic"],
+      P_value = result["P_value"]
+    )
+  })),
+  
+  do.call(rbind, lapply(random_controls, function(x) {
+    
+    result <- run_ks_peak(x, "Baseline")
+    
+    data.frame(
+      Comparison = paste(x, "vs Baseline"),
+      KS_statistic = result["KS_statistic"],
+      P_value = result["P_value"]
+    )
+  }))
+)
+
+all_ks_peak_tests$KS_statistic <- round(
+  as.numeric(all_ks_peak_tests$KS_statistic), 3
+)
+
+all_ks_peak_tests$P_value <- signif(
+  as.numeric(all_ks_peak_tests$P_value), 3
+)
+
+all_ks_peak_tests
+```
+```{r}
+write.csv(
+  all_ks_peak_tests,
+  "result3_all_ks_peak_KS_tests.csv",
+  row.names = FALSE
+)
+```

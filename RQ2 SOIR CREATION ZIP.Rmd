@@ -653,11 +653,161 @@ results <- pblapply(
 )
 ```
 ```{r}
+  saveRDS(
+    results,
+    paste0("sensitivity_analysis_1.rds")
+  )
+```
+```{r}
 # Combine results - stacks all the one-row dataframes to create one combined data frame
 # bind_rows = dplyr
 results_RB <- bind_rows(results) 
-#results
+results_RB
 ```
+```{r}
+# AI code
+# visualise trends in ranking
+plot_data <- bind_rows(
+  results_RB %>%
+    group_by(beta) %>%
+    summarise(mean_final_infected = mean(final_infected), .groups = "drop") %>%
+    mutate(
+      parameter = "Beta",
+      value = beta
+    ) %>%
+    select(parameter, value, mean_final_infected),
+
+  results_RB %>%
+    group_by(occult_period) %>%
+    summarise(mean_final_infected = mean(final_infected), .groups = "drop") %>%
+    mutate(
+      parameter = "Occult period",
+      value = occult_period
+    ) %>%
+    select(parameter, value, mean_final_infected),
+
+  results_RB %>%
+    group_by(infectious_period) %>%
+    summarise(mean_final_infected = mean(final_infected), .groups = "drop") %>%
+    mutate(
+      parameter = "Infectious period",
+      value = infectious_period
+    ) %>%
+    select(parameter, value, mean_final_infected)
+)
+
+ggplot(
+  plot_data,
+  aes(
+    x = value,
+    y = mean_final_infected,
+    group = parameter
+  )
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  facet_wrap(~ parameter, scales = "free_x") +
+  labs(
+    x = "Parameter value",
+    y = "Mean final epidemic size"
+  ) +
+  theme_classic()
+```
+
+```{r}
+# AI CODE
+# robustness of seed farm ranking
+
+# Beta
+beta_plot <- results_RB %>%
+  group_by(beta, seed_type) %>%
+  summarise(
+    mean_final_infected = mean(final_infected),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    parameter = "Beta",
+    value = as.character(beta)
+  ) %>%
+  select(parameter, value, seed_type, mean_final_infected)
+
+
+# Occult period
+occult_plot <- results_RB %>%
+  group_by(occult_period, seed_type) %>%
+  summarise(
+    mean_final_infected = mean(final_infected),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    parameter = "Occult period",
+    value = as.character(occult_period)
+  ) %>%
+  select(parameter, value, seed_type, mean_final_infected)
+
+
+# Infectious period
+infectious_plot <- results_RB %>%
+  group_by(infectious_period, seed_type) %>%
+  summarise(
+    mean_final_infected = mean(final_infected),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    parameter = "Infectious period",
+    value = as.character(infectious_period)
+  ) %>%
+  select(parameter, value, seed_type, mean_final_infected)
+
+
+# Combine
+plot_data <- bind_rows(
+  beta_plot,
+  occult_plot,
+  infectious_plot
+) %>%
+  mutate(
+    seed_type = factor(
+      seed_type,
+      levels = c("out_degree", "betweenness", "random"),
+      labels = c("Out-degree", "Betweenness", "Random")
+    )
+  )
+
+
+# Plot
+p_sens1 <- ggplot(
+  plot_data,
+  aes(
+    x = value,
+    y = mean_final_infected,
+    colour = seed_type,
+    group = seed_type
+  )
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(
+    title = "Parameter robustness sensitivity analysis",
+    x = "Parameter value",
+    y = "Mean final epidemic size",
+    colour = "Seed farm type"
+  ) +
+  theme_classic()
+
+ggsave(
+  "parameter_sensitivity1.png",
+  plot = p_sens1,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
+```
+INTERPRET - the relative effect of seed type is consistent across the range of B, occult period, and infecitous period values examined. structurally important farms consistently produce larger outbreaks than randomly selected farms
+
+
 Mean outbreak size by seed type:
   Gives the overall effect across all tested beta/occult/infectious values & stochastic replicates
 ```{r}
@@ -1060,6 +1210,7 @@ run_sensitivity <- function(x){
 }
 ```
 
+
 ```{r}
 # lapply() runs run_sensitivity once for each row in scenarios weigthed (expand.grid already made 100 copies of each); do.call(rbind...) combines all individual simulation results into single results table. pblapply - adds progress bar
 results2 <- do.call(
@@ -1073,12 +1224,80 @@ results2 <- do.call(
 )
 ```
 ```{r}
+  saveRDS(
+    results2,
+    paste0("sensitivity_analysis_2 _Bpara.rds")
+  )
+```
+```{r}
 # Combine results - stacks all the one-row dataframes to create one combined data frame
 # bind_rows = dplyr
 results2 <- bind_rows(results2) 
 #results
 ```
+```{r}
+plot_data <- results2 %>%
+  group_by(beta, seed_type) %>%
+  summarise(
+    mean_final_infected = mean(final_infected),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    seed_type = factor(
+      seed_type,
+      levels = c("out_degree", "betweenness", "random"),
+      labels = c("Out-degree", "Betweenness", "Random")
+    )
+  )
 
+p_sens2 <- ggplot(
+  plot_data,
+  aes(
+    x = beta,
+    y = mean_final_infected,
+    colour = seed_type,
+    group = seed_type
+  )
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  labs(
+    title = "β Parameter robustness analysis",
+    x = "Per-animal transmission probability (β)",
+    y = "Mean final epidemic size",
+    colour = "Seed farm type"
+  ) +
+  theme_classic()
+
+ggsave(
+  "parameter_sensitivity2.png",
+  plot = p_sens2,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
+```
+```{r}
+ggplot(
+  plot_data,
+  aes(
+    x = beta,
+    y = mean_final_infected,
+    colour = seed_type,
+    group = seed_type
+  )
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  scale_x_log10() +
+  labs(
+    x = "Per-animal transmission probability (β)",
+    y = "Mean final epidemic size",
+    colour = "Seed type"
+  ) +
+  theme_classic()
+```
 Mean outbreak size by seed type:
   Gives the overall effect across all tested beta/occult/infectious values & stochastic replicates
 ```{r}
@@ -1335,7 +1554,7 @@ df <- data.frame(
 df$p_transmit <- 1 - (1 - beta)^df$batch_size
 
 
-ggplot(df, aes(x = batch_size, y = p_transmit)) +
+p <- ggplot(df, aes(x = batch_size, y = p_transmit)) +
   geom_line(
     colour = "firebrick",
     linewidth = 1.2
@@ -1350,6 +1569,18 @@ ggplot(df, aes(x = batch_size, y = p_transmit)) +
     )
   ) +
   theme_classic()
+
+# display plot
+p
+
+ggsave(
+  filename = "batch_size_transmission_curve.png",
+  plot = p,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 600
+)
 ```
 
 Replicates sensitivity analysis

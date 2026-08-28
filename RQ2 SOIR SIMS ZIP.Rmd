@@ -399,18 +399,176 @@ for (n in replicate_tests) {
 )
 }
 ```
+
 ```{r}
 # combine results
 stability_results <- bind_rows(results)
 
 stability_results
 ```
-
+```{r}
+# save results
+saveRDS(
+  stability_results,
+  paste0("stoc_sens_analysis.rds")
+)
+```
 
 ```{r}
 results_df <- bind_rows(results)
 
 results_df
+```
+```{r}
+replicate_tests_extra <- c(5000, 10000)
+
+results_extra <- list()
+
+for (n in replicate_tests_extra) {
+  
+  baseline_scenario_grid <- data.frame(
+    replicate = 1:n
+  )
+
+  baseline_results <- pblapply(
+    seq_len(nrow(baseline_scenario_grid)),
+    function(i){
+      run_baseline(baseline_scenario_grid[i, , drop = FALSE])
+    }
+  )
+
+  summary_results <- bind_rows(
+    lapply(baseline_results, function(x) x$summary)
+  )
+
+  results_extra[[as.character(n)]] <- data.frame(
+    replicates = n,
+    mean_final = mean(summary_results$final_infected),
+    median_final = median(summary_results$final_infected),
+    prob_spread = mean(summary_results$final_infected > 1),
+    p95_final = as.numeric(
+      quantile(summary_results$final_infected, 0.95)
+    )
+  )
+}
+```
+```{r}
+stability_results2 <- bind_rows(results_extra)
+
+stability_results2
+```
+```{r}
+# save results
+saveRDS(
+  stability_results2,
+  paste0("stoc_sens_analysis2.rds")
+)
+```
+```{r}
+stability_results_comb <- bind_rows(
+  stability_results,
+  stability_results2
+) %>%
+  arrange(replicates)
+
+stability_results_comb
+```
+```{r}
+# AI code - make table for report
+
+table_results_stoc <- stability_results_comb %>%
+  arrange(replicates) %>%
+  mutate(
+    `Probability of spread (%)` = prob_spread * 100
+  ) %>%
+  select(
+    `Stochastic replicates` = replicates,
+    `Mean final outbreak size` = mean_final,
+    `Median final outbreak size` = median_final,
+    `Probability of spread (%)`
+  )
+
+table_results_stoc
+```
+```{r}
+# save as csv
+write.csv(
+  table_results_stoc,
+  "stochastic_replicate_sensitivity_table.csv",
+  row.names = FALSE
+)
+```
+
+```{r}
+# AI code, use categorical rather than numerical axis to make equal spacing between numbers
+# Make replicate number categorical
+stability_results_comb <- stability_results_comb %>%
+  mutate(
+    replicates_factor = factor(
+      replicates,
+      levels = c(10, 50, 100, 300, 500, 1000, 2000, 5000, 10000)
+    )
+  )
+
+# Plot
+p_stoc <- ggplot(
+  stability_results_comb,
+  aes(
+    x = replicates_factor,
+    y = mean_final,
+    group = 1
+  )
+) +
+  geom_line(
+    colour = "grey50",
+    linewidth = 0.9
+  ) +
+  geom_point(
+    colour = "grey35",
+    size = 3
+  ) +
+  
+  # Highlight 2,000 replicates
+  geom_point(
+    data = stability_results_comb %>% filter(replicates == 2000),
+    colour = "firebrick",
+    size = 4.5
+  ) +
+  
+  # Label 2,000
+  annotate(
+    "text",
+    x = 7,
+    y = 3.15,
+    label = "2,000 replicates\nselected for main analysis",
+    colour = "firebrick",
+    fontface = "bold",
+    hjust = 0.5
+  ) +
+  
+  labs(
+    x = "Number of stochastic replicates",
+    y = "Mean final outbreak size"
+  ) +
+  
+  theme_classic(base_size = 13) +
+  theme(
+    axis.text.x = element_text(size = 11),
+    axis.title = element_text(size = 13)
+  )
+
+# display plot
+p_stoc
+
+# save as png
+ggsave(
+  filename = "stochastic_replicate_sensitivity.png",
+  plot = p_stoc,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
 ```
 ```{r}
 ggplot(results_df, aes(x = replicates, y = mean_final)) +
