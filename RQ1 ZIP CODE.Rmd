@@ -21,14 +21,12 @@ library(gt)
 library(patchwork)
 ```
 
-https://link.springer.com/content/pdf/10.1007/s11274-025-04755-3.pdf
-
 # Network construction and overall structure
 
-Construct 12 period-specific networks
+Construct 12 period-specific networks - code adapted from networks module, CRAN igraph material and the Digivet consortium (https://github.com/digivet-consortium/movenet/tree/main)https://github.com/digivet-consortium/movenet/blob/main/R/network_creation.R
 
 ```{r}
-# copy of graph pipeline function - modified to make one panel of 12 graphs
+# Final graph pipeline function
 node_colours <- c(
   "Cow-Calf" = "green",
   "Starter Feedlot" = "purple",
@@ -1176,7 +1174,7 @@ https://search.r-project.org/CRAN/refmans/lehuynh/html/MinMaxScaling.html
 file:///C:/Users/errai/Downloads/Visual_analysis_of_network_centralities.pdf & https://www.researchgate.net/publication/221536310_Visual_analysis_of_network_centralities (webpage)
 
 ```{r}
-# standardise the three node-level metrics - min-max scaling within each obs period
+# standardise the three node-level metrics - min-max scaling within each obs period - manual min/max scaling
 monthly_metrics_scaled <- lapply(monthly_metrics_nodes, function(m) {
 
   m$outdeg_scaled <- (m$outdegree - min(m$outdegree)) /

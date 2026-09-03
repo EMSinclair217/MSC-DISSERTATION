@@ -14,7 +14,7 @@ https://pmc.ncbi.nlm.nih.gov/articles/instance/2600903/bin/rspb20071601s01.pdf
 https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004038#pcbi-1004038-g001
 https://pmc.ncbi.nlm.nih.gov/articles/PMC6122770/#Sec5
 https://efsa.onlinelibrary.wiley.com/doi/full/10.2903/j.efsa.2023.8028
-https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2017.4959 - bTB informaiton
+https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2017.4959 - bTB informaiton EFSA
 
 https://www.rdocumentation.org/packages/stats/versions/3.5.2/topics/Uniform - R Documentation - runif()
 

@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 https://github.com/digivet-consortium/movenet/blob/main/R/network_creation.R
 https://digivet-consortium.github.io/movenet/authors.html#citation
+https://github.com/digivet-consortium/movenet/blob/main/notebooks/SimInf_SEIR_moves_notdistances.R
 
 N.B. for SimInf model - graph needs to be in 
 A B
